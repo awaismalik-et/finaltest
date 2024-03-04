@@ -55,6 +55,27 @@ const processEnvironment = async (envLambdaArn, envLambdaPrefix, envName, enable
     }
 };
 
+
+async function refreshCloudFrontInvocations(distributionId) {
+    try {
+      // Create invalidation request
+      const invalidation = await cloudfront.createInvalidation({
+        DistributionId: distributionId,
+        InvalidationBatch: {
+          CallerReference: `${Date.now()}`,
+          Paths: {
+            Quantity: 1,
+            Items: ['/*'] // Invalidate all objects in the distribution
+          }
+        }
+      }).promise();
+
+      console.log(`Invalidation created for CloudFront distribution ${distributionId}: ${invalidation.Invalidation.Id}`);
+    } catch (error) {
+      console.error('Error refreshing CloudFront invocations:', error);
+    }
+  }
+  
 const updateCloudFrontOriginDomain = async (distributionId, oldDomainName, newDomainName) => {
     const cloudfront = new AWS.CloudFront();
     try {
@@ -75,6 +96,18 @@ const updateCloudFrontOriginDomain = async (distributionId, oldDomainName, newDo
         console.error('Error:', error);
         throw error;
     }
+    await cloudfront.createInvalidation({
+        DistributionId: distributionId,
+        InvalidationBatch: {
+          CallerReference: `${Date.now()}`,
+          Paths: {
+            Quantity: 1,
+            Items: ['/*'] // Invalidate all objects in the distribution
+          }
+        }
+      }).promise();
+    
+  
 };
 
 const listAndDisableEventBridgeRules = async (eventbridge) => {
@@ -178,8 +211,8 @@ const mainFunction = async () => {
     const currentEnvironment = process.env.SWITCHING_TO;
     const currentEnv = environments[currentEnvironment];
     await updateCloudFrontOriginDomain(DISTRIBUTION_ID, currentEnv.previousOriginGroup, currentEnv.currentOriginGroup);
-    // await processEnvironment(currentEnv.previousEnvLambdaArn, currentEnv.previousEnvLambdaPrefix, currentEnv.previousEnvironment, false, currentEnv.previousAwsRegion);
-    // await processEnvironment(currentEnv.currentEnvLambdaArn, currentEnv.currentEnvLambdaPrefix, currentEnvironment, true, currentEnv.currentAwsRegion);
+    await processEnvironment(currentEnv.previousEnvLambdaArn, currentEnv.previousEnvLambdaPrefix, currentEnv.previousEnvironment, false, currentEnv.previousAwsRegion);
+    await processEnvironment(currentEnv.currentEnvLambdaArn, currentEnv.currentEnvLambdaPrefix, currentEnvironment, true, currentEnv.currentAwsRegion);
 };
 
 mainFunction()
