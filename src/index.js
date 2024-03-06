@@ -5,92 +5,75 @@ const { program } = require('commander');
 const { promisify } = require('util');
 const {lambdaType, lambdaEnvironment}  = require ('./enum.js')
 const readFileAsync = promisify(fs.readFile);
-const listAndModifyFunctions = require('../helper/lambda')
-const { listAndDisableEventBridgeRules, listAndEnableEventBridgeRules } = require('../helper/eventbridge')
+const { listLambdas, modifyLambdaConcurrency } = require('../helper/lambda')
+const {  modifyEventBridgeRules } = require('../helper/eventbridge')
+const {  modifyVpnConnectionRoute } = require('../helper/ec2')
 
 
-const processEnvironment = async (envLambdaProperties, envName, enable, concurrency, region) => {
-    const eventbridge = new AWS.EventBridge({ region });
-    const lambda = new AWS.Lambda({ region });
+const processLambda = async (environmentConfig, enable, concurrency) => {
+    console.log("Processing lambda")
+
+    let region =   enable ? environmentConfig.active_region : environmentConfig.failover_region
+    let lambdaProperties = enable ? environmentConfig.active_lambdas : environmentConfig.failover_lambdas
+    const eventbridge = new AWS.EventBridge({ region})
+    const lambda = new AWS.Lambda ({ region})
     try{
-        if(lambdaType.ARN == envLambdaProperties.type){
+        
+        if(lambdaType.ARN == lambdaProperties.type){
             console.log("Lambda arn was provided");
-            const targetArns = envLambdaProperties.items;
-            for (const arn of targetArns) {
-                const lambdaArnParams = {
-                    FunctionName: arn,
-                    ReservedConcurrentExecutions: concurrency
-                };
-                await lambda.putFunctionConcurrency(lambdaArnParams).promise();
-                const params = { TargetArn: arn };
-                try {
-                    const rules = await eventbridge.listRuleNamesByTarget(params).promise();
-                    const ruleNames = rules.RuleNames;
-                    for (const ruleName of ruleNames) {
-                        await (enable ? eventbridge.enableRule({ Name: ruleName }).promise() : eventbridge.disableRule({ Name: ruleName }).promise());
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                }
-            }
+            await modifyLambdaConcurrency(lambda, lambdaProperties.items,  concurrency)
+            await modifyEventBridgeRules(eventbridge, lambdaProperties.items, enable)
         }
-
-        else if(lambdaType.PREFIX == envLambdaProperties.type){
+        
+        else if(lambdaType.PREFIX == lambdaProperties.type){
             console.log("Lambda prefix was provided");
-            for (const lambdaProperty of envLambdaProperties.items) {
-                await listAndModifyFunctions(lambda, lambdaProperty, concurrency);
-                const envLambdaPrefix = lambdaProperty;
-                const rules = await eventbridge.listRules({ NamePrefix: envLambdaPrefix }).promise();
-                for (const rule of rules.Rules) {
-                  await (enable ? eventbridge.enableRule({ Name: rule.Name }).promise() : eventbridge.disableRule({ Name: rule.Name }).promise());
-                }
-              }
+            let aggregateLambdaArns = []
+            for(let item of lambdaProperties.items ){
+                let lambdaArns = await listLambdas(lambda, item)
+                aggregateLambdaArns = aggregateLambdaArns.concat(lambdaArns)
+            }
+            await modifyLambdaConcurrency(lambda, aggregateLambdaArns,  concurrency)
+            await modifyEventBridgeRules(eventbridge, aggregateLambdaArns, enable)
         }
-
+        
         else{
-            console.log(`No lambda arn or lambda prefix provided, ${enable ? 'enabling' : 'disabling'} all the crons from ${envName} environment`);
-            await listAndModifyFunctions(lambda);
-            await (enable ? listAndEnableEventBridgeRules(eventbridge) : listAndDisableEventBridgeRules(eventbridge));
-        }  
+            console.log("No Lambda arn and no Lambda prefix was provided");
+            let lambdaArns = await listLambdas(lambda)
+            await modifyLambdaConcurrency(lambda, lambdaArns,  concurrency)
+            await modifyEventBridgeRules(eventbridge, lambdaArns, enable)
+        }   
     }
-    
+
     catch (error) {
         console.error('Error:', error);
         throw error;
     }
 };
 
-const addIpAddressesToDestinationVpnEndpoint = async (environmentConfig, currentEnvironment) => {
-    const ec2 = new AWS.EC2({ region: currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? environmentConfig.currentAwsRegion : environmentConfig.previousAwsRegion });
-    let ips = environmentConfig.vpnEndpoints.ips
-    let endPointsToAddIpsFrom = currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? environmentConfig.vpnEndpoints.active_vpn_endpoints_id : environmentConfig.vpnEndpoints.failover_vpn_endpoints_id;
-    let endPointsToRemoveIpsFrom = currentEnvironment !== lambdaEnvironment.ACTIVE_ENV ? environmentConfig.vpnEndpoints.active_vpn_endpoints_id : environmentConfig.vpnEndpoints.failover_vpn_endpoints_id;
-
-    console.log(`Adding ips to ${currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? lambdaEnvironment.ACTIVE_ENV : lambdaEnvironment.FAILOVER_ENV  } vpc endpoint`)
-    for (const endpoint of endPointsToAddIpsFrom){
-        for (const ip of ips){
-            let params = {
-                DestinationCidrBlock: `${ip}`, 
-                VpnConnectionId: endpoint 
-              };
-              await ec2.createVpnConnectionRoute(params).promise()
-        }
+const processVpnEndpoint = async (environmentConfig, currentEnvironment) => {
+    console.log("Processing VPN ENDPOINT")
+    try{
+        const ec2 = new AWS.EC2({ region: currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? environmentConfig.active_region : environmentConfig.failover_region });
+        let ips = environmentConfig.vpn_endpoints.ips
+        let endPointsToAddIpsFrom = currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? environmentConfig.vpn_endpoints.active_vpn_endpoints_id : environmentConfig.vpn_endpoints.failover_vpn_endpoints_id;
+        let endPointsToRemoveIpsFrom = currentEnvironment !== lambdaEnvironment.ACTIVE_ENV ? environmentConfig.vpn_endpoints.active_vpn_endpoints_id : environmentConfig.vpn_endpoints.failover_vpn_endpoints_id;
+    
+        console.log(`Adding ips to ${currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? lambdaEnvironment.ACTIVE_ENV : lambdaEnvironment.FAILOVER_ENV  } vpc endpoint`)
+        await modifyVpnConnectionRoute(ec2, endPointsToAddIpsFrom, ips, true)
+    
+    
+        console.log(`Removing ips from ${currentEnvironment !== lambdaEnvironment.ACTIVE_ENV ? lambdaEnvironment.ACTIVE_ENV : lambdaEnvironment.FAILOVER_ENV  } vpc endpoint`)
+        await modifyVpnConnectionRoute(ec2, endPointsToRemoveIpsFrom, ips, false)
     }
-
-    console.log(`Removing ips from ${currentEnvironment !== lambdaEnvironment.ACTIVE_ENV ? lambdaEnvironment.ACTIVE_ENV : lambdaEnvironment.FAILOVER_ENV  } vpc endpoint`)
-    for (const endpoint of endPointsToRemoveIpsFrom){
-        for (const ip of ips){
-            let params = {
-                DestinationCidrBlock: `${ip}`, 
-                VpnConnectionId: endpoint 
-              };
-              await ec2.deleteVpnConnectionRoute(params).promise()
-        }
+    catch (error) {
+        console.error('Error:', error);
+        throw error;
     }
 
 }
 
 const updateCloudFrontOriginDomain = async (cloudfrontSettings) => {
+    console.log("Updating Cloudfront")
     const cloudfront = new AWS.CloudFront();
     try {
 
@@ -161,41 +144,18 @@ const mainFunction = async () => {
       }
 
     let envs = await readAndParseFile(file)
-    const environments = {
-        PROD: {
-            currentAwsRegion: envs.active_region,
-            previousAwsRegion: envs.failover_region,
-            currentLambdasProperties: envs.active_lambdas,
-            previousLambdasProperties: envs.failover_lambdas,
-            vpnEndpoints: envs.vpn_endpoints,
-            previousEnvironment: lambdaEnvironment.FAILOVER_ENV
-        },
-        DR: {
-            currentAwsRegion: envs.failover_region,
-            previousAwsRegion: envs.active_region,
-            currentLambdasProperties: envs.failover_lambdas,
-            previousLambdasProperties: envs.active_lambdas,
-            vpnEndpoints: envs.vpn_endpoints,
-            previousEnvironment: lambdaEnvironment.ACTIVE_ENV
-        }
-    };
 
     const currentEnvironment = envs.switching_to;
-    const currentEnv = environments[currentEnvironment];
     await updateCloudFrontOriginDomain(envs);
-    await processEnvironment(currentEnv.previousLambdasProperties, currentEnv.previousEnvironment, false, 0, currentEnv.previousAwsRegion);
-    await processEnvironment(currentEnv.currentLambdasProperties, currentEnv.currentEnvironment, true, 100, currentEnv.currentAwsRegion)
-    await addIpAddressesToDestinationVpnEndpoint(currentEnv, currentEnvironment )     
+    await processLambda(envs, false, 0);
+    await processLambda(envs, true, 10);
+    await processVpnEndpoint(envs, currentEnvironment)
 };
 
 async function readAndParseFile(file) {
-    try {
-      const data = await readFileAsync(file, { encoding: 'utf-8' });
-      const dataToJson = JSON.parse(data);
-      return dataToJson
-    } catch (error) {
-      console.error('Error reading or parsing file:', error);
-    }
+    const data = await readFileAsync(file, { encoding: 'utf-8' });
+    const dataToJson = JSON.parse(data);
+    return dataToJson
   }
 
 

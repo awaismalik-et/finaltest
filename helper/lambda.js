@@ -1,4 +1,16 @@
-const listAndModifyFunctions = async (lambda, prefix = "", concurrency = 0) => {
+const modifyLambdaConcurrency = async (lambda, environmentConfig, concurrency) =>{
+    const targetArns = environmentConfig;
+    for (const arn of targetArns) {
+        const lambdaArnParams = {
+            FunctionName: arn,
+            ReservedConcurrentExecutions: concurrency
+        };
+        await lambda.putFunctionConcurrency(lambdaArnParams).promise();
+        console.log(`Updated concurrency for ${arn}`);
+    }
+}
+
+const listLambdas = async (lambda, prefix = "") => {
     try {
         let functionsWithPrefix = [];
         let nextMarker = null;
@@ -8,24 +20,17 @@ const listAndModifyFunctions = async (lambda, prefix = "", concurrency = 0) => {
                 Marker: nextMarker
             };
             const data = await lambda.listFunctions(listParams).promise();
-            const functionsFiltered = data.Functions.filter(func => func.FunctionName.startsWith(prefix));
+            const functionsFiltered = data.Functions.filter(func => func.FunctionName.startsWith(prefix)).map(func => func.FunctionArn);
             functionsWithPrefix.push(...functionsFiltered);
             nextMarker = data.NextMarker;
-            for (const func of functionsFiltered) {
-                const updateParams = {
-                    FunctionName: func.FunctionName,
-                    ReservedConcurrentExecutions: concurrency
-                };
-                await lambda.putFunctionConcurrency(updateParams).promise();
-                console.log(`Updated concurrency for ${func.FunctionName}`);
-            }
         } while (nextMarker);
-        functionsWithPrefix.forEach(func => {
-            console.log(func.FunctionName);
-        });
+        return functionsWithPrefix
     } catch (err) {
         console.log("Error:", err);
     }
 };
 
-module.exports = listAndModifyFunctions
+module.exports = {
+    listLambdas,
+    modifyLambdaConcurrency
+}
