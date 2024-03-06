@@ -17,15 +17,14 @@ const processLambda = async (environmentConfig, enable, concurrency) => {
     let lambdaProperties = enable ? environmentConfig.active_lambdas : environmentConfig.failover_lambdas
     const eventbridge = new AWS.EventBridge({ region})
     const lambda = new AWS.Lambda ({ region})
-    try{
-        
-        if(lambdaType.ARN == lambdaProperties.type){
+    try 
+    {
+        if (lambdaType.ARN == lambdaProperties.type) {
             console.log("Lambda arn was provided");
             await modifyLambdaConcurrency(lambda, lambdaProperties.items,  concurrency)
             await modifyEventBridgeRules(eventbridge, lambdaProperties.items, enable)
         }
-        
-        else if(lambdaType.PREFIX == lambdaProperties.type){
+        else if (lambdaType.PREFIX == lambdaProperties.type) {
             console.log("Lambda prefix was provided");
             let aggregateLambdaArns = []
             for(let item of lambdaProperties.items ){
@@ -35,24 +34,21 @@ const processLambda = async (environmentConfig, enable, concurrency) => {
             await modifyLambdaConcurrency(lambda, aggregateLambdaArns,  concurrency)
             await modifyEventBridgeRules(eventbridge, aggregateLambdaArns, enable)
         }
-        
-        else{
+        else {
             console.log("No Lambda arn and no Lambda prefix was provided");
             let lambdaArns = await listLambdas(lambda)
             await modifyLambdaConcurrency(lambda, lambdaArns,  concurrency)
             await modifyEventBridgeRules(eventbridge, lambdaArns, enable)
         }   
     }
-
     catch (error) {
         console.error('Error:', error);
-        throw error;
     }
 };
 
 const processVpnEndpoint = async (environmentConfig, currentEnvironment) => {
     console.log("Processing VPN ENDPOINT")
-    try{
+    try {
         const ec2 = new AWS.EC2({ region: currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? environmentConfig.active_region : environmentConfig.failover_region });
         let ips = environmentConfig.vpn_endpoints.ips
         let endPointsToAddIpsFrom = currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? environmentConfig.vpn_endpoints.active_vpn_endpoints_id : environmentConfig.vpn_endpoints.failover_vpn_endpoints_id;
@@ -67,16 +63,14 @@ const processVpnEndpoint = async (environmentConfig, currentEnvironment) => {
     }
     catch (error) {
         console.error('Error:', error);
-        throw error;
     }
-
 }
 
-const updateCloudFrontOriginDomain = async (cloudfrontSettings) => {
+const processCloudFront = async (cloudfrontSettings) => {
     console.log("Updating Cloudfront")
     const cloudfront = new AWS.CloudFront();
-    try {
-
+    try 
+    {
         for (const distribution of cloudfrontSettings.cloudfront) {
             const data = await cloudfront.getDistributionConfig({ Id: distribution.id }).promise();
             const distributionConfig = data.DistributionConfig;
@@ -92,7 +86,6 @@ const updateCloudFrontOriginDomain = async (cloudfrontSettings) => {
             } else {
                 defaultBehavior.TargetOriginId = cloudfrontConfig.behaviors[0].failover_origin;
             }
-
             const cacheBehaviors = distributionConfig.CacheBehaviors.Items;
             for (const behavior of cloudfrontConfig.behaviors) {
                 const activeOrigin = behavior.active_origin;
@@ -112,6 +105,7 @@ const updateCloudFrontOriginDomain = async (cloudfrontSettings) => {
                 DistributionConfig: distributionConfig,
                 IfMatch: data.ETag
             }).promise();
+
             await cloudfront.createInvalidation({
                 DistributionId: distribution.id,
                 InvalidationBatch: {
@@ -126,14 +120,13 @@ const updateCloudFrontOriginDomain = async (cloudfrontSettings) => {
 
     } catch (error) {
         console.error('Error updating CloudFront behaviors:', error);
-        throw error;
     }
-
 }   
 
 const mainFunction = async () => {
     program
     .version('0.0.1')
+    .argument('<file>', 'File to read')
     .argument('<file>', 'File to read')
     .parse(process.argv);
 
@@ -146,7 +139,7 @@ const mainFunction = async () => {
     let envs = await readAndParseFile(file)
 
     const currentEnvironment = envs.switching_to;
-    await updateCloudFrontOriginDomain(envs);
+    await processCloudFront(envs);
     await processLambda(envs, false, 0);
     await processLambda(envs, true, 10);
     await processVpnEndpoint(envs, currentEnvironment)

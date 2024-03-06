@@ -1,5 +1,5 @@
 {
-    "switching_to":"PROD",
+    "switching_to": "DR",
     "active_region": "us-east-1",
     "failover_region": "us-east-2",
     "cloudfront": [

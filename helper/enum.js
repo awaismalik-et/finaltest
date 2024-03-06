@@ -5,8 +5,8 @@ const lambdaType = Object.freeze({
   });
 
   const lambdaEnvironment = Object.freeze({
-    ACTIVE_ENV: 'PROD',
-    FAILOVER_ENV: 'DR'
+    ACTIVE_ENV: 'ACTIVE',
+    FAILOVER_ENV: 'FAILOVER'
   });  
 
 module.exports = {lambdaType, lambdaEnvironment}

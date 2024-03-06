@@ -5,7 +5,6 @@ const modifyEventBridgeRules = async (eventbridge, lambdaProperties, enable) => 
         const rules = await eventbridge.listRuleNamesByTarget(params).promise();
         const ruleNames = rules.RuleNames;
         for (const ruleName of ruleNames) {
-            
             await (enable ? eventbridge.enableRule({ Name: ruleName }).promise() : eventbridge.disableRule({ Name: ruleName }).promise());
             console.log(`Rule '${ruleName}' ${action}`);
         }
@@ -13,6 +12,5 @@ const modifyEventBridgeRules = async (eventbridge, lambdaProperties, enable) => 
 }
 
 module.exports = {
-
     modifyEventBridgeRules
 }
