@@ -34,6 +34,7 @@ const processEnvironment = async (envLambdaProperties, envName, enable, concurre
                 }
             }
         }
+
         else if(lambdaType.PREFIX == envLambdaProperties.type){
             console.log("Lambda prefix was provided");
             for (const lambdaProperty of envLambdaProperties.items) {
@@ -45,13 +46,15 @@ const processEnvironment = async (envLambdaProperties, envName, enable, concurre
                 }
               }
         }
+
         else{
-                console.log(`No lambda arn or lambda prefix provided, ${enable ? 'enabling' : 'disabling'} all the crons from ${envName} environment`);
-                await listAndModifyFunctions(lambda);
-                await (enable ? listAndEnableEventBridgeRules(eventbridge) : listAndDisableEventBridgeRules(eventbridge));
-        }   
+            console.log(`No lambda arn or lambda prefix provided, ${enable ? 'enabling' : 'disabling'} all the crons from ${envName} environment`);
+            await listAndModifyFunctions(lambda);
+            await (enable ? listAndEnableEventBridgeRules(eventbridge) : listAndDisableEventBridgeRules(eventbridge));
+        }  
     }
-     catch (error) {
+    
+    catch (error) {
         console.error('Error:', error);
         throw error;
     }
@@ -64,7 +67,6 @@ const addIpAddressesToDestinationVpnEndpoint = async (environmentConfig, current
     let endPointsToRemoveIpsFrom = currentEnvironment !== lambdaEnvironment.ACTIVE_ENV ? environmentConfig.vpnEndpoints.active_vpn_endpoints_id : environmentConfig.vpnEndpoints.failover_vpn_endpoints_id;
 
     console.log(`Adding ips to ${currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? lambdaEnvironment.ACTIVE_ENV : lambdaEnvironment.FAILOVER_ENV  } vpc endpoint`)
-
     for (const endpoint of endPointsToAddIpsFrom){
         for (const ip of ips){
             let params = {
@@ -74,8 +76,8 @@ const addIpAddressesToDestinationVpnEndpoint = async (environmentConfig, current
               await ec2.createVpnConnectionRoute(params).promise()
         }
     }
-    console.log(`Removing ips from ${currentEnvironment !== lambdaEnvironment.ACTIVE_ENV ? lambdaEnvironment.ACTIVE_ENV : lambdaEnvironment.FAILOVER_ENV  } vpc endpoint`)
 
+    console.log(`Removing ips from ${currentEnvironment !== lambdaEnvironment.ACTIVE_ENV ? lambdaEnvironment.ACTIVE_ENV : lambdaEnvironment.FAILOVER_ENV  } vpc endpoint`)
     for (const endpoint of endPointsToRemoveIpsFrom){
         for (const ip of ips){
             let params = {
@@ -85,22 +87,22 @@ const addIpAddressesToDestinationVpnEndpoint = async (environmentConfig, current
               await ec2.deleteVpnConnectionRoute(params).promise()
         }
     }
+
 }
 
 const updateCloudFrontOriginDomain = async (cloudfrontSettings) => {
     const cloudfront = new AWS.CloudFront();
     try {
+
         for (const distribution of cloudfrontSettings.cloudfront) {
             const data = await cloudfront.getDistributionConfig({ Id: distribution.id }).promise();
             const distributionConfig = data.DistributionConfig;
-    
-            // Find the CloudFront distribution configuration in the JSON
+
             const cloudfrontConfig = cloudfrontSettings.cloudfront.find(c => c.id === distribution.id);
             if (!cloudfrontConfig) {
                 throw new Error(`CloudFront distribution with ID '${distribution.id}' not found in the JSON.`);
             }
-    
-            // Iterate through behaviors
+
             const defaultBehavior = distributionConfig.DefaultCacheBehavior;
             if (cloudfrontSettings.switching_to === lambdaEnvironment.ACTIVE_ENV) {
                 defaultBehavior.TargetOriginId = cloudfrontConfig.behaviors[0].active_origin;
@@ -108,13 +110,11 @@ const updateCloudFrontOriginDomain = async (cloudfrontSettings) => {
                 defaultBehavior.TargetOriginId = cloudfrontConfig.behaviors[0].failover_origin;
             }
 
-            // Update behaviors in CacheBehaviors
             const cacheBehaviors = distributionConfig.CacheBehaviors.Items;
             for (const behavior of cloudfrontConfig.behaviors) {
                 const activeOrigin = behavior.active_origin;
                 const failoverOrigin = behavior.failover_origin;
 
-                // Find and update behaviors based on switching_to value
                 for (const cacheBehavior of cacheBehaviors) {
                     if (cloudfrontSettings.switching_to === lambdaEnvironment.ACTIVE_ENV && cacheBehavior.TargetOriginId === failoverOrigin) {
                         cacheBehavior.TargetOriginId = activeOrigin;
@@ -124,7 +124,6 @@ const updateCloudFrontOriginDomain = async (cloudfrontSettings) => {
                 }
             }
     
-            // Update the distribution configuration
             await cloudfront.updateDistribution({
                 Id: distribution.id,
                 DistributionConfig: distributionConfig,
@@ -142,12 +141,10 @@ const updateCloudFrontOriginDomain = async (cloudfrontSettings) => {
               }).promise();
         }
 
-
     } catch (error) {
         console.error('Error updating CloudFront behaviors:', error);
         throw error;
     }
-
 
 }   
 
@@ -182,6 +179,7 @@ const mainFunction = async () => {
             previousEnvironment: lambdaEnvironment.ACTIVE_ENV
         }
     };
+
     const currentEnvironment = envs.switching_to;
     const currentEnv = environments[currentEnvironment];
     await updateCloudFrontOriginDomain(envs);
@@ -189,6 +187,7 @@ const mainFunction = async () => {
     await processEnvironment(currentEnv.currentLambdasProperties, currentEnv.currentEnvironment, true, 100, currentEnv.currentAwsRegion)
     await addIpAddressesToDestinationVpnEndpoint(currentEnv, currentEnvironment )     
 };
+
 async function readAndParseFile(file) {
     try {
       const data = await readFileAsync(file, { encoding: 'utf-8' });
