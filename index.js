@@ -1,44 +1,45 @@
 // Imports
 const AWS = require('aws-sdk');
+require('aws-sdk/lib/maintenance_mode_message').suppress = true;
 const fs = require('fs');
 const { program } = require('commander');
 const { promisify } = require('util');
-const {lambdaType, lambdaEnvironment}  = require ('./enum.js')
+const {searchType, searchEnvironment}  = require ('./helper/enum.js')
 const readFileAsync = promisify(fs.readFile);
-const { listLambdas, modifyLambdaConcurrency } = require('../helper/lambda')
-const {  modifyEventBridgeRules } = require('../helper/eventbridge')
-const {  modifyVpnConnectionRoute } = require('../helper/ec2')
+const { listLambdas, modifyLambdaConcurrency } = require('./helper/aws/lambda')
+const {  modifyEventBridgeRules } = require('./helper/aws/eventbridge')
+const {  modifyVpnConnectionRoute } = require('./helper/aws/ec2')
+const {  updateDistribution, createInvalidation } = require('./helper/aws/cloudfront')
 
 
-const processLambda = async (environmentConfig, enable, concurrency) => {
+const processLambda = async (environmentConfig, switchingTo) => {
     console.log("Processing lambda")
-
-    let region =   enable ? environmentConfig.active_region : environmentConfig.failover_region
-    let lambdaProperties = enable ? environmentConfig.active_lambdas : environmentConfig.failover_lambdas
-    const eventbridge = new AWS.EventBridge({ region})
-    const lambda = new AWS.Lambda ({ region})
+    const region = switchingTo == environmentConfig.switching_to? environmentConfig.active_region : environmentConfig.failover_region;
+    const lambdaProperties = switchingTo === environmentConfig.switching_to ? environmentConfig.active_lambdas : environmentConfig.failover_lambdas;
+    const eventbridge = new AWS.EventBridge({ region });
+    const lambda = new AWS.Lambda({ region });
     try 
     {
-        if (lambdaType.ARN == lambdaProperties.type) {
+        if (searchType.ARN == lambdaProperties.type) {
             console.log("Lambda arn was provided");
-            await modifyLambdaConcurrency(lambda, lambdaProperties.items,  concurrency)
-            await modifyEventBridgeRules(eventbridge, lambdaProperties.items, enable)
+            await modifyLambdaConcurrency(lambda, lambdaProperties.items,  lambdaProperties.concurrency)
+            await modifyEventBridgeRules(eventbridge, lambdaProperties.items, lambdaProperties.enable)
         }
-        else if (lambdaType.PREFIX == lambdaProperties.type) {
+        else if (searchType.PREFIX == lambdaProperties.type) {
             console.log("Lambda prefix was provided");
             let aggregateLambdaArns = []
             for(let item of lambdaProperties.items ){
                 let lambdaArns = await listLambdas(lambda, item)
                 aggregateLambdaArns = aggregateLambdaArns.concat(lambdaArns)
             }
-            await modifyLambdaConcurrency(lambda, aggregateLambdaArns,  concurrency)
-            await modifyEventBridgeRules(eventbridge, aggregateLambdaArns, enable)
+            await modifyLambdaConcurrency(lambda, aggregateLambdaArns,  lambdaProperties.concurrency)
+            await modifyEventBridgeRules(eventbridge, aggregateLambdaArns, lambdaProperties.enable)
         }
         else {
             console.log("No Lambda arn and no Lambda prefix was provided");
             let lambdaArns = await listLambdas(lambda)
-            await modifyLambdaConcurrency(lambda, lambdaArns,  concurrency)
-            await modifyEventBridgeRules(eventbridge, lambdaArns, enable)
+            await modifyLambdaConcurrency(lambda, lambdaArns,  lambdaProperties.concurrency)
+            await modifyEventBridgeRules(eventbridge, lambdaArns, lambdaProperties.enable)
         }   
     }
     catch (error) {
@@ -49,16 +50,16 @@ const processLambda = async (environmentConfig, enable, concurrency) => {
 const processVpnEndpoint = async (environmentConfig, currentEnvironment) => {
     console.log("Processing VPN ENDPOINT")
     try {
-        const ec2 = new AWS.EC2({ region: currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? environmentConfig.active_region : environmentConfig.failover_region });
+        const ec2 = new AWS.EC2({ region: currentEnvironment === searchEnvironment.ACTIVE_ENV ? environmentConfig.active_region : environmentConfig.failover_region });
         let ips = environmentConfig.vpn_endpoints.ips
-        let endPointsToAddIpsFrom = currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? environmentConfig.vpn_endpoints.active_vpn_endpoints_id : environmentConfig.vpn_endpoints.failover_vpn_endpoints_id;
-        let endPointsToRemoveIpsFrom = currentEnvironment !== lambdaEnvironment.ACTIVE_ENV ? environmentConfig.vpn_endpoints.active_vpn_endpoints_id : environmentConfig.vpn_endpoints.failover_vpn_endpoints_id;
+        let endPointsToAddIpsFrom = currentEnvironment === searchEnvironment.ACTIVE_ENV ? environmentConfig.vpn_endpoints.active_vpn_endpoints_id : environmentConfig.vpn_endpoints.failover_vpn_endpoints_id;
+        let endPointsToRemoveIpsFrom = currentEnvironment !== searchEnvironment.ACTIVE_ENV ? environmentConfig.vpn_endpoints.active_vpn_endpoints_id : environmentConfig.vpn_endpoints.failover_vpn_endpoints_id;
     
-        console.log(`Adding ips to ${currentEnvironment === lambdaEnvironment.ACTIVE_ENV ? lambdaEnvironment.ACTIVE_ENV : lambdaEnvironment.FAILOVER_ENV  } vpc endpoint`)
+        console.log(`Adding ips to ${currentEnvironment === searchEnvironment.ACTIVE_ENV ? searchEnvironment.ACTIVE_ENV : searchEnvironment.FAILOVER_ENV  } vpc endpoint`)
         await modifyVpnConnectionRoute(ec2, endPointsToAddIpsFrom, ips, true)
     
     
-        console.log(`Removing ips from ${currentEnvironment !== lambdaEnvironment.ACTIVE_ENV ? lambdaEnvironment.ACTIVE_ENV : lambdaEnvironment.FAILOVER_ENV  } vpc endpoint`)
+        console.log(`Removing ips from ${currentEnvironment !== searchEnvironment.ACTIVE_ENV ? searchEnvironment.ACTIVE_ENV : searchEnvironment.FAILOVER_ENV  } vpc endpoint`)
         await modifyVpnConnectionRoute(ec2, endPointsToRemoveIpsFrom, ips, false)
     }
     catch (error) {
@@ -81,7 +82,7 @@ const processCloudFront = async (cloudfrontSettings) => {
             }
 
             const defaultBehavior = distributionConfig.DefaultCacheBehavior;
-            if (cloudfrontSettings.switching_to === lambdaEnvironment.ACTIVE_ENV) {
+            if (cloudfrontSettings.switching_to === searchEnvironment.ACTIVE_ENV) {
                 defaultBehavior.TargetOriginId = cloudfrontConfig.behaviors[0].active_origin;
             } else {
                 defaultBehavior.TargetOriginId = cloudfrontConfig.behaviors[0].failover_origin;
@@ -92,30 +93,15 @@ const processCloudFront = async (cloudfrontSettings) => {
                 const failoverOrigin = behavior.failover_origin;
 
                 for (const cacheBehavior of cacheBehaviors) {
-                    if (cloudfrontSettings.switching_to === lambdaEnvironment.ACTIVE_ENV && cacheBehavior.TargetOriginId === failoverOrigin) {
+                    if (cloudfrontSettings.switching_to === searchEnvironment.ACTIVE_ENV && cacheBehavior.TargetOriginId === failoverOrigin) {
                         cacheBehavior.TargetOriginId = activeOrigin;
-                    } else if (cloudfrontSettings.switching_to === lambdaEnvironment.FAILOVER_ENV && cacheBehavior.TargetOriginId === activeOrigin) {
+                    } else if (cloudfrontSettings.switching_to === searchEnvironment.FAILOVER_ENV && cacheBehavior.TargetOriginId === activeOrigin) {
                         cacheBehavior.TargetOriginId = failoverOrigin;
                     }
                 }
             }
-    
-            await cloudfront.updateDistribution({
-                Id: distribution.id,
-                DistributionConfig: distributionConfig,
-                IfMatch: data.ETag
-            }).promise();
-
-            await cloudfront.createInvalidation({
-                DistributionId: distribution.id,
-                InvalidationBatch: {
-                  CallerReference: `${Date.now()}`,
-                  Paths: {
-                    Quantity: 1,
-                    Items: ['/*'] // Invalidate all objects in the distribution
-                  }
-                }
-              }).promise();
+            await updateDistribution(cloudfront, distribution.id, distributionConfig, data.ETag)
+            await createInvalidation(cloudfront, distribution.id)
         }
 
     } catch (error) {
@@ -126,23 +112,32 @@ const processCloudFront = async (cloudfrontSettings) => {
 const mainFunction = async () => {
     program
     .version('0.0.1')
-    .argument('<file>', 'File to read')
-    .argument('<file>', 'File to read')
+    .option('-a --processAll', "Process all services")
+    .option('-c --processCloudFront', "Process Cloudfront")
+    .option('-l --processLambda', "Process Lambda")
+    .option('-v --processVpnEndpoint', "Process VpnEndpoint")
+    .option('-f, --file <file>', "File to read")
     .parse(process.argv);
+    
+    const options = program.opts();
+    if (!options.file)
+    {
+        console.error("Configuration file is missing")
+        return;
+    }
 
-    const file = program.args[0];
-    if (!file) {
-        console.error('Please provide a file to read.');
-        process.exit(1);
-      }
-
+    const file = options.file;
     let envs = await readAndParseFile(file)
 
     const currentEnvironment = envs.switching_to;
-    await processCloudFront(envs);
-    await processLambda(envs, false, 0);
-    await processLambda(envs, true, 10);
-    await processVpnEndpoint(envs, currentEnvironment)
+    if (options.processAll || options.processCloudFront)
+        await processCloudFront(envs);
+    if (options.processAll || options.processLambda) {
+        await processLambda(envs, searchEnvironment.ACTIVE_ENV);
+        await processLambda(envs, searchEnvironment.FAILOVER_ENV);
+    }
+    if (options.processAll || options.processVpnEndpoint)
+        await processVpnEndpoint(envs, currentEnvironment)
 };
 
 async function readAndParseFile(file) {

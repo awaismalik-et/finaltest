@@ -1,13 +1,13 @@
-const lambdaType = Object.freeze({
+const searchType = Object.freeze({
     PREFIX: 'prefix',
     ALL: 'all',
     ARN: 'arn'
   });
 
-  const lambdaEnvironment = Object.freeze({
+  const searchEnvironment = Object.freeze({
     ACTIVE_ENV: 'ACTIVE',
     FAILOVER_ENV: 'FAILOVER'
   });  
 
-module.exports = {lambdaType, lambdaEnvironment}
+module.exports = {searchType, searchEnvironment}
   

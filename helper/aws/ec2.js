@@ -1,5 +1,5 @@
 const modifyVpnConnectionRoute = async (ec2, endpoints, ips, addRoutes) => {
-    const action = enable ? 'added' : 'removed';
+    const action = addRoutes ? 'added' : 'removed';
     for (const endpoint of endpoints) {
         for (const ip of ips) {
             let params = {

@@ -1,0 +1,15 @@
+{
+  "name": "swapstech-galaxy-serverless-dr-switching-automation",
+  "version": "1.0.0",
+  "description": "This guide explains how to use the provided JSON configuration to manage AWS resources.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1572.0",
+    "commander": "^12.0.0"
+  }
+}
