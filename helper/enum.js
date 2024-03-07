@@ -4,10 +4,10 @@ const searchType = Object.freeze({
     ARN: 'arn'
   });
 
-  const searchEnvironment = Object.freeze({
+  const awsEnvironment = Object.freeze({
     ACTIVE_ENV: 'ACTIVE',
     FAILOVER_ENV: 'FAILOVER'
   });  
 
-module.exports = {searchType, searchEnvironment}
+module.exports = {searchType, awsEnvironment}
   

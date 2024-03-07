@@ -6,7 +6,7 @@ const modifyVpnConnectionRoute = async (ec2, endpoints, ips, addRoutes) => {
                 DestinationCidrBlock: `${ip}`, 
                 VpnConnectionId: endpoint 
             };
-            await (addRoutes ? ec2.createVpnConnectionRoute(params) : ec2.deleteVpnConnectionRoute(params)).promise()
+            // await (addRoutes ? ec2.createVpnConnectionRoute(params) : ec2.deleteVpnConnectionRoute(params)).promise()
             console.log(`${action} '${ip}' in ${endpoint}`);
         }
     }
