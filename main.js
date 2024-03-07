@@ -63,10 +63,10 @@ const processLambda = async (environmentConfig) => {
             activeEnvLambdaArns = await listLambdas(activeEnvLambdaClient)
             failoverEnvLambdaArns = await listLambdas(failoverEnvLambdaClient)
         }
-        await modifyLambdaConcurrency(activeEnvLambdaClient, aggregateActiveEnvLambdaArns, activeEnvConcurrency)
-        await modifyLambdaConcurrency(failoverEnvLambdaClient, aggregateFailoverEnvLambdaArns, failoverEnvConcurrency)
-        await modifyEventBridgeRules(activeEnvEventbridgeClient, aggregateActiveEnvLambdaArns, activeEnvEnable)
-        await modifyEventBridgeRules(failoverEnvEventbridgeClient, aggregateFailoverEnvLambdaArns, failoverEnvEnable)   
+        await modifyLambdaConcurrency(activeEnvLambdaClient, activeEnvLambdaArns, activeEnvConcurrency)
+        await modifyLambdaConcurrency(failoverEnvLambdaClient, failoverEnvLambdaArns, failoverEnvConcurrency)
+        await modifyEventBridgeRules(activeEnvEventbridgeClient, activeEnvLambdaArns, activeEnvEnable)
+        await modifyEventBridgeRules(failoverEnvEventbridgeClient, failoverEnvLambdaArns, failoverEnvEnable)   
     }
     catch (error) {
         console.error('Error:', error);
@@ -97,7 +97,10 @@ const processVpnEndpoint = async (environmentConfig) => {
         await modifyVpnConnectionRoute(ec2toRemoveIpsClient, endPointsToRemoveIpsFrom, ips, false)
     }
     catch (error) {
-        console.error('Error:', error);
+        if(error.code == "InvalidRoute.NotFound")
+            console.error('Route does not exists:', error.code);
+        else
+            console.error('Error:', error);
     }
 }
 
