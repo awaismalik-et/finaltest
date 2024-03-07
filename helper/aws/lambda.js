@@ -5,19 +5,10 @@ const modifyLambdaConcurrency = async (lambda, environmentConfig, concurrency) =
             FunctionName: arn,
             ReservedConcurrentExecutions: concurrency
         };
-        // await lambda.putFunctionConcurrency(lambdaArnParams).promise();
+        await lambda.putFunctionConcurrency(lambdaArnParams).promise();
         console.log(`Updated concurrency for ${arn} to ${concurrency}`);
     }
 }
-
-const getLambdaArns = async (lambda, items) => {
-    let aggregateLambdaArns = [];
-    for (let item of items) {
-        const lambdaArns = await listLambdas(lambda, item);
-        aggregateLambdaArns = aggregateLambdaArns.concat(lambdaArns);
-    }
-    return aggregateLambdaArns;
-};
 
 const listLambdas = async (lambda, prefix = "") => {
     let functionsWithPrefix = [];
@@ -36,6 +27,5 @@ const listLambdas = async (lambda, prefix = "") => {
 
 module.exports = {
     listLambdas,
-    modifyLambdaConcurrency,
-    getLambdaArns
+    modifyLambdaConcurrency
 }

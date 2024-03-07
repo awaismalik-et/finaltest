@@ -1,5 +1,5 @@
 {
-    "switching_to":"FAILOVER",
+    "switching_to":"ACTIVE",
     "active_region": "us-east-1",
     "failover_region": "us-east-2",
     "cloudfront": [
@@ -7,27 +7,26 @@
             "id": "E2HG59FLTF3H9I",
             "behaviors": [
                 {
-                    "active_origin": "daniyal-s3.s3.us-east-1.amazonaws.com",
-                    "failover_origin": "daniyal-s3-us-east-2.s3.us-east-2.amazonaws.com"
+                    "active_origin": "XXXXX",
+                    "failover_origin": "XXXXX"
                 },
                 {
-                    "active_origin": "abduresourcesbucket.s3.us-east-1.amazonaws.com",
-                    "failover_origin": "abd-test-bucket.s3.amazonaws.com"
+                    "active_origin": "XXXX",
+                    "failover_origin": "XXXX"
                 }
             ]
         }
     ],
     "active_lambdas": {
-        "type": "prefix",
+        "type": "arn",
         "items": [
-            "dani-"
+            "XXXXX"
         ]
     },
     "failover_lambdas": {
-        "type": "prefix",
+        "type": "arn",
         "items": [
-            "dani-lambda",
-            "dani-fednow-service-1-"
+            "XXXX"
         ]
     },
     "vpn_endpoints": {
@@ -38,11 +37,10 @@
             "192.168.1.4/32"
         ],
         "active_vpn_endpoints_id": [
-            "vpn-00ffb8dba6c7ca080"
+            "vpn-XXXX"
         ],
         "failover_vpn_endpoints_id": [
-            "vpn-0d8e67b06552488d9"
-
+            "vpn-XXXX"
         ]
     }
 }
