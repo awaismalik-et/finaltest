@@ -5,9 +5,9 @@ This guide explains how to use the provided JSON configuration to manage AWS res
 
 ## Requirements
 
-Node.js installed on your machine
+Node.js
 
-AWS SDK for JavaScript (aws-sdk) installed in your Node.js project
+AWS crendetials
 
 ## Configuration JSON
 The provided JSON configuration contains settings for managing various AWS resources. Here's what each section represents:
