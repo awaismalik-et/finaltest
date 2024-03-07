@@ -1,10 +1,10 @@
 {
-    "switching_to": "DR",
+    "switching_to":"ACTIVE",
     "active_region": "us-east-1",
     "failover_region": "us-east-2",
     "cloudfront": [
         {
-            "id": "E2HCBLDLGL00CO",
+            "id": "E2HG59FLTF3H9I",
             "behaviors": [
                 {
                     "active_origin": "XXXXX",
@@ -18,12 +18,16 @@
         }
     ],
     "active_lambdas": {
+        "concurrency": 0,
+        "enable":false,
         "type": "arn",
         "items": [
             "XXXXX"
         ]
     },
     "failover_lambdas": {
+        "concurrency": 1,
+        "enable":true,
         "type": "arn",
         "items": [
             "XXXX"
