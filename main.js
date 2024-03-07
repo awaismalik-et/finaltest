@@ -136,6 +136,8 @@ const mainFunction = async () => {
     if (options.processAll || options.processCloudFront)
         await processCloudFront(envs);
     if (options.processAll || options.processLambda) {
+        addRegion = switchingToEnvironment === searchEnvironment.ACTIVE_ENV ? environmentConfig.active_region : environmentConfig.failover_region
+        
         await processLambda(envs, searchEnvironment.ACTIVE_ENV);
         await processLambda(envs, searchEnvironment.FAILOVER_ENV);
     }
