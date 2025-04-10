@@ -1,0 +1,61 @@
+{
+    "active_region": "us-east-1",
+    "failover_region": "us-east-1",
+    "cloudfront": [
+        {
+            "id": "E348XQ58TH7HW",
+            "behaviors": [
+                {
+                    "path": "/portal/f2/*",
+                    "active_origin": "S3-Website-finzly-bankos-s3-udr.s3-website-us-west-2.amazonaws.com",
+                    "failover_origin": "S3-Website-finzly-bankos-s3-DR.s3-website-us-west-2.amazonaws.com"
+                },
+                {
+                    "path": "/flowable-ui*",
+                    "active_origin": "ELB-finzly-eks-bankos-udr-lb",
+                    "failover_origin": "ELB-finzly-eks-bankos-DR-lb"
+                },
+                {
+                    "path": "/flow*",
+                    "active_origin": "S3-Website-finzly-bankos-s3-udr.s3-website-us-west-2.amazonaws.com",
+                    "failover_origin": "S3-Website-finzly-bankos-s3-DR.s3-website-us-west-2.amazonaws.com"
+                },
+                {
+                    "path": "/apperror*",
+                    "active_origin": "S3-Website-finzly-bankos-s3-udr.s3-website-us-west-2.amazonaws.com",
+                    "failover_origin": "S3-Website-finzly-bankos-s3-DR.s3-website-us-west-2.amazonaws.com"
+                },
+                {
+                    "path": "/favicon.ico*",
+                    "active_origin": "S3-Website-finzly-bankos-s3-udr.s3-website-us-west-2.amazonaws.com",
+                    "failover_origin": "S3-Website-finzly-bankos-s3-DR.s3-website-us-west-2.amazonaws.com"
+                },
+                {
+                    "path": "Default",
+                    "active_origin": "ELB-finzly-eks-bankos-udr-lb",
+                    "failover_origin": "ELB-finzly-eks-bankos-DR-lb"
+                }
+            ]
+        },
+        {
+            "id": "E1W5TV8FGVF0CK",
+            "behaviors": [
+                {
+                    "path": "Default",
+                    "active_origin": "S3-Website-finzly-digitalbanking-s3-uat.s3-website-us-east-1.amazonaws.com",
+                    "failover_origin": "s3-website-finzly-digitalbanking-s3-DR.s3-website-us-east-1.amazonaws.com"
+                },
+                {
+                    "path": "/flow*",
+                    "active_origin": "S3-Website-finzly-digitalbanking-s3-udr.s3.us-west-2.amazonaws.com",
+                    "failover_origin": "s3-website-finzly-digitalbanking-s3-DR.s3-website-us-east-1.amazonaws.com"
+                },
+                {
+                    "path": "/api*",
+                    "active_origin": "ELB-finzly-eks-cashos-udr-lb",
+                    "failover_origin": "ELB-finzly-eks-cashos-DR-lb"
+                }
+            ]
+        }
+    ]
+}

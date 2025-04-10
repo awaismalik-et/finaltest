@@ -1,0 +1,53 @@
+{
+    "active_region": "us-east-1",
+    "failover_region": "us-east-2",
+
+    "active_lambda_triggers": 
+    [
+        {
+            "arn": "arn:aws:lambda:us-east-1:489994096722:function:dani-jenkins-v-1",
+            "buckets": [
+                {
+                    "name": "daniyal-test-v1",
+                    "eventName": "test-event",
+                    "events": [
+                        "s3:ReducedRedundancyLostObject",
+                        "s3:ObjectCreated:*"
+                    ]
+                }
+            ],
+            "sqs": [
+                "ead04ebb-39ff-41c5-9eea-16abf1640a48"
+            ]
+        }        
+    ],
+    "failover_lambda_triggers": [
+        {
+            "arn": "arn:aws:lambda:us-east-2:489994096722:function:dani-lambda-04",
+            "buckets": [
+                {
+                    "name": "daniyal-test-v4",
+                    "eventName": "abdullah-slack-eventbridge",
+                    "events": [
+                        "s3:ReducedRedundancyLostObject",
+                        "s3:ObjectCreated:*"
+                    ],
+                    "filter": {
+                        "Key": 
+                        {
+                            "FilterRules": [
+                                {
+                                    "Name": "prefix",
+                                    "Value": "/images"
+                                }
+                           ]
+                        }
+                    }
+                }
+            ],
+            "sqs": [
+                "e77cf08d-d417-4df4-a7c6-509ba6aa9f78"
+            ]
+        }
+    ]
+}

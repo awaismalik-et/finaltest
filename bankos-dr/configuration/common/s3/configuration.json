@@ -1,0 +1,14 @@
+{
+  "active_region": "us-east-1",
+  "failover_region": "us-east-2",
+  "triggers": [
+    {
+      "active_bucket": "danial-test-1",
+      "failover_bucket": "danial-test-2"
+    },
+    {
+      "active_bucket": "danial-test-3",
+      "failover_bucket": "danial-test-4"
+    }
+  ]
+}

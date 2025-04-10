@@ -1,0 +1,22 @@
+{
+    "active_region": "us-east-1",
+    "failover_region": "us-east-2",
+    "rds":[
+        {
+            "active_configurations": {
+                "identifier": "hqf-sls-1",
+                "kms_key_id": "40a25d87-c7cd-4162-b7b8-f4fef85b53a5",
+                "subnet_group_name":"dani-db-subnet-group",
+                "security_group_ids":["sg-093626bfdd501cd04"],
+                "proxy_name": "hqf-sls-proxy-1"
+            },
+            "failover_configurations": {
+                "identifier": "dani-db-1",
+                "kms_key_id": "ff9aceb7-a089-4dcd-8aee-9e50e62e7c89",
+                "subnet_group_name":"dani-db-subnet-group",
+                "security_group_ids":["sg-0fa2023b184f3dd00"],
+                "proxy_name": "dani-db-proxy-1"
+            }
+        }
+    ]
+}

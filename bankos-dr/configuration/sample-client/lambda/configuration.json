@@ -1,0 +1,53 @@
+{
+    "active_region": "us-east-1",
+    "failover_region": "us-east-2",
+
+    "active_lambda_triggers": 
+    [
+        {
+            "arn": "arn:aws:lambda:us-east-1:489994096722:function:dani-test-function",
+            "buckets": [
+                {
+                    "name": "daniyal-test-v2",
+                    "eventName": "test-event",
+                    "events": [
+                        "s3:ReducedRedundancyLostObject",
+                        "s3:ObjectCreated:*"
+                    ]
+                }
+            ],
+            "sqs": [
+                "eb756cb5-527c-4268-9c5c-50a46696db88"
+            ]
+        }         
+    ],
+    "failover_lambda_triggers": [
+        {
+            "arn": "arn:aws:lambda:us-east-2:489994096722:function:dani-jenkins-2",
+            "buckets": [
+                {
+                    "name": "daniyal-test-v3",
+                    "eventName": "",
+                    "events": [
+                        "s3:ReducedRedundancyLostObject",
+                        "s3:ObjectCreated:*"
+                    ],
+                    "filter": {
+                        "Key": 
+                        {
+                            "FilterRules": [
+                                {
+                                    "Name": "prefix",
+                                    "Value": "/abc"
+                                }
+                           ]
+                        }
+                    }
+                }
+            ],
+            "sqs": [
+                "01d449cc-94ee-4bc2-87a3-8d75a15fb842"
+            ]
+        }
+    ]
+}

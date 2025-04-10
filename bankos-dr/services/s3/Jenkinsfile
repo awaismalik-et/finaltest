@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+    environment {
+        CONFIG_FILE = 'bankos-dr/configuration/common/s3/configuration.json'
+    }
+    parameters {
+        choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
+        password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
+        password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
+        password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
+
+        booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Check this to run the pipeline in dry run mode')
+        booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
+
+    }
+    stages {
+        stage('Install Node.js and Packages') {
+            steps {
+                sh '''
+                cd bankos-dr
+                npm install
+                '''
+            }
+        }
+        stage('Load and Process Configuration') {
+            steps {
+                script {
+                    env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
+                    env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
+                    env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
+
+                    def activeFilteredArray = []
+                    def failoverFilteredArray = []
+
+                    def command = "node bankos-dr/services/s3/main.js"
+
+                    env.SWITCHING_TO = params.SWITCHING_TO
+
+                    if (params.DRY_RUN) {
+                        command += ' -dr'
+                    }
+                    if (params.PROCESS_CURRENT_ENV) {
+                        command += ' -pce'
+                    }
+
+                    sh command
+                }
+            }
+        }
+    }
+}

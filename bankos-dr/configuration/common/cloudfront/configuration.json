@@ -1,0 +1,61 @@
+{
+    "active_region": "us-east-1",
+    "failover_region": "us-east-2",
+    "cloudfront": [
+        {
+            "id": "E1SWEKVGS79K7K",
+            "behaviors": [
+                {
+                    "path": "Default",
+                    "active_origin": "abd-test-bucket.s3.amazonaws.com",
+                    "failover_origin": "abduresourcesbucket.s3.us-east-1.amazonaws.com"
+                },
+                {
+                    "path": "/js/*",
+                    "active_origin": "abd-test-bucket.s3.amazonaws.com",
+                    "failover_origin": "abduresourcesbucket.s3.us-east-1.amazonaws.com"
+                }
+            ]
+        },
+        {
+            "id": "E3QX5YDI77LAWN",
+            "behaviors": [
+                {
+                    "path": "Default",
+                    "active_origin": "abduresourcesbucket.s3.us-east-1.amazonaws.com",
+                    "failover_origin": "abd-test-bucket.s3.amazonaws.com"
+                },
+                {
+                    "path": "/js/*",
+                    "active_origin": "abduresourcesbucket.s3.us-east-1.amazonaws.com",
+                    "failover_origin": "abd-test-bucket.s3.amazonaws.com"
+                }
+            ]
+        },
+        {
+            "id": "EP55MX24HA0BY",
+            "behaviors": [
+                {
+                    "path": "Default",
+                    "active_origin": "uniquebucket014309123.s3.amazonaws.com",
+                    "failover_origin": "test"
+                },
+                {
+                    "path": "/static/*",
+                    "active_origin": "uniquebucket014309123.s3.amazonaws.com",
+                    "failover_origin": "abd-test-bucket.s3.amazonaws.com"
+                },
+                {
+                    "path": "/*.css",
+                    "active_origin": "uniquebucket014309123.s3.amazonaws.com",
+                    "failover_origin": "abd-test-bucket.s3.amazonaws.com"
+                },
+                {
+                    "path": "/*.js",
+                    "active_origin": "uniquebucket014309123.s3.amazonaws.com",
+                    "failover_origin": "test"
+                }
+            ]
+        }
+    ]
+}

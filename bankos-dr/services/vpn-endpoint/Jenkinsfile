@@ -1,0 +1,63 @@
+pipeline {
+    agent {
+        docker {
+            label 'bankos'
+            image 'build-agent:1.0.2-jdk17'
+            registryUrl 'https://docker.finzly.net'
+            registryCredentialsId 'nexus-creds'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
+
+    parameters {
+        choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
+        choice(name: 'CLIENT_NAME', choices: ['FED', 'RTP', 'FED-ACH','sample-client'], description: 'Select the CLIENT_NAME')
+        password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
+        password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
+        password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
+
+        booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Check this to run the pipeline in dry run mode')
+        booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
+    }
+
+    stages {
+        stage('Install Node.js Packages') {
+            steps {
+                sh '''
+                cd bankos-dr
+                npm install
+                '''
+            }
+        }
+
+        stage('Load and Process Configuration') {
+            steps {
+                script {
+                    env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
+                    env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
+                    env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
+
+                    // Split the keywords string into an array
+                    def filteredArray = ''
+                    def command = 'node bankos-dr/services/vpn-endpoint/main.js'
+                    env.SWITCHING_TO = params.SWITCHING_TO
+                    env.CLIENT_NAME = params.CLIENT_NAME
+
+                    if (params.DRY_RUN) {
+                        command += ' -dr'
+                    }
+                    if (params.PROCESS_CURRENT_ENV) {
+                        command += ' -pce'
+                    }
+
+                    // Debugging: Check current directory and list files
+                    sh 'pwd'
+                    sh 'ls -l'
+
+                    // Execute the command to process VPN endpoint
+                    sh command
+                }
+            }
+        }
+    }
+}
