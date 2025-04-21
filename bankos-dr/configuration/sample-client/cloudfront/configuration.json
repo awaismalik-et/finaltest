@@ -47,7 +47,7 @@
                 },
                 {
                     "path": "/flow*",
-                    "active_origin": "S3-Website-finzly-digitalbanking-s3-udr.s3.us-west-2.amazonaws.com",
+                    "active_origin": "S3-Website-finzly-digitalbanking-s3-uat.s3-website-us-east-1.amazonaws.com",
                     "failover_origin": "s3-website-finzly-digitalbanking-s3-DR.s3-website-us-east-1.amazonaws.com"
                 },
                 {

@@ -20,7 +20,7 @@ AWS.config.update({
 global.dryRun = false; 
 
 const readConfigFile = async () => {
-  const filePath = path.resolve(__dirname, '..', '..', 'configuration', 'common', 'cloudwatch-rules', 'configuration.json');
+  const filePath = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'cloudwatch-rules', 'configuration.json');
   const data = await readFileAsync(filePath, { encoding: 'utf-8' });
   return JSON.parse(data);
 };
@@ -70,6 +70,7 @@ const mainFunction = async () => {
     .parse(process.argv);
 
   const options = program.opts();
+  global.SLEEP_TIME = 1000;
   global.dryRun = options.dryRun || false;
 
   if (global.dryRun) {

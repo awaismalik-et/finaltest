@@ -9,6 +9,13 @@ The script also supports:
 Dry-run mode for safe testing and validation.
 
 Option to process the current environment, dynamically controlled via Jenkins pipeline (Jenkinsfile).
+
+You can also change the values of the following variables responsible for multipart uploads and parallel uploads defined in the helper/s3.js
+`const DEFAULT_MAX_CONCURRENCY = 20;`
+`const DEFAULT_MULTIPART_THRESHOLD = '8MB';`
+`const DEFAULT_MULTIPART_CHUNKSIZE = '16MB';`
+`const DEFAULT_MAX_QUEUE = 10000;`
+
 ## How It Works
 ### Configuration Check
 Before execution, run-s3.js performs the following checks:
@@ -32,21 +39,8 @@ Source S3 bucket (Active) — The bucket currently handling events.
 Target S3 bucket (Failover) — The bucket that will handle events after switching.
 
 ### Actions performed:
-Fetch event notifications from the Active S3 bucket.
+The Target S3 bucket is synced with the source S3 bucket using AWS CLI (Make sure it is already installed)
 
-Update ARNs inside event notifications to match the 
-
-Failover region resources (e.g., Lambda ARNs, SNS topics, SQS ARNs).
-
-Apply updated event notification configuration to the Failover S3 bucket.
-
-If --processCurrentEnvironment is enabled:
-Remove event notifications from the Active S3 bucket to prevent duplicate triggers.
-This ensures that:
-
-Failover S3 bucket becomes active and starts triggering events.
-
-Active S3 bucket is disabled, preventing conflicts or duplicate events.
 ### Note:
 Only the event notifications specified in the configuration file are modified.
 
@@ -62,23 +56,7 @@ Source S3 bucket (Failover) — The current active bucket.
 Target S3 bucket (Active) — The bucket to restore as primary.
 
 ### Actions performed:
-
-Fetch event notifications from the Failover S3 bucket.
-
-Update ARNs inside event notifications to match the 
-Active region resources.
-
-Apply updated event notification configuration to the 
-Active S3 bucket.
-
-If --processCurrentEnvironment is enabled:
-Remove event notifications from the Failover S3 bucket.
-
-This ensures that:
-
-Active S3 bucket is restored to handle event triggers.
-
-Failover S3 bucket is disabled, preventing conflicting triggers.
+The Target S3 bucket is synced with the source S3 bucket using AWS CLI (Make sure it is already installed)
 
 ### Note:
 Only event notifications listed in the configuration are affected.

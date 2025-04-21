@@ -5,7 +5,11 @@ const path = require('path');
 const { program } = require('commander');
 const chalk = require('chalk');
 const { custom_logging } = require('../../helper/helper.js');
-const { putBucketNotificationConfiguration,getBucketNotificationConfiguration,deleteBucketNotificationConfiguration } = require('../../helper/aws/s3.js');
+const { 
+  putBucketNotificationConfiguration,
+  getBucketNotificationConfiguration,
+  deleteBucketNotificationConfiguration,
+} = require('../../helper/aws/s3.js');
 
 const readFileAsync = promisify(fs.readFile);
 global.DRY_RUN = false;
@@ -70,9 +74,15 @@ const copyS3EventNotifications = async (s3Settings, processCurrentEnv) => {
       custom_logging(chalk.yellow(`Updated Configuration for ${targetBucket}:`));
       custom_logging(JSON.stringify(updatedNotificationConfig, null, 2));
 
-      await putBucketNotificationConfiguration(targetS3, targetBucket, updatedNotificationConfig);
+      if (!global.DRY_RUN) {
+        await putBucketNotificationConfiguration(targetS3, targetBucket, updatedNotificationConfig);
+        custom_logging(chalk.green(`Successfully applied event notifications to ${targetBucket} in ${targetRegion}`));
+      } else {
+        custom_logging(chalk.yellow(`[DRY RUN] Would apply event notifications to ${targetBucket} in ${targetRegion}`));
+      }
     } catch (error) {
       custom_logging(chalk.red(`Error copying notifications for ${sourceBucket}: ${error.message}`));
+      throw error;
     }
   }
 
@@ -81,9 +91,15 @@ const copyS3EventNotifications = async (s3Settings, processCurrentEnv) => {
       const currentRegion = s3Settings.switching_to === "ACTIVE" ? s3Settings.failover_region : s3Settings.active_region;
       const currentBucket = s3Settings.switching_to === "ACTIVE" ? trigger.failover_bucket : trigger.active_bucket;
       const s3Client = new AWS.S3({ region: currentRegion });
+
       custom_logging(chalk.yellow(`Deleting event notifications from ${currentBucket} in ${currentRegion}`));
-      await deleteBucketNotificationConfiguration(s3Client, currentBucket);
-      custom_logging(chalk.green(`Successfully deleted event notifications from ${currentBucket} in ${currentRegion}`));
+      
+      if (!global.DRY_RUN) {
+        await deleteBucketNotificationConfiguration(s3Client, currentBucket);
+        custom_logging(chalk.green(`Successfully deleted event notifications from ${currentBucket} in ${currentRegion}`));
+      } else {
+        custom_logging(chalk.yellow(`[DRY RUN] Would delete event notifications from ${currentBucket} in ${currentRegion}`));
+      }
     }
   }
 };
@@ -91,23 +107,37 @@ const copyS3EventNotifications = async (s3Settings, processCurrentEnv) => {
 const mainFunction = async () => {
   program
     .version('1.0.0')
-    .option('-dr --dryRun', "Dry run the process")
-    .option('-pce --processCurrentEnvironment', "Process current environment")
+    .option('-dr, --dryRun', "Dry run the process")
+    .option('-pce, --processCurrentEnvironment', "Process current environment")
     .parse(process.argv);
+
+  global.SLEEP_TIME = 1000;
 
   const options = program.opts();
   global.DRY_RUN = options.dryRun || false;
-  const configFile = path.resolve(__dirname, '..', '..', 'configuration', "common", 's3', 'configuration.json');
-  let config = await readAndParseFile(configFile);
-  config['switching_to'] = process.env.SWITCHING_TO;
-  const processCurrentEnv = process.env.PROCESS_CURRENT_ENV === 'true';
+  
+  if (global.DRY_RUN) {
+    custom_logging(chalk.yellow("Running in DRY RUN mode - no changes will be made"));
+  }
+  
+  const configFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 's3', 'configuration.json');
+  
+  try {
+    let config = await readAndParseFile(configFile);
+    config['switching_to'] = process.env.SWITCHING_TO;
+    const processCurrentEnv = process.env.PROCESS_CURRENT_ENV === 'true' || options.processCurrentEnvironment;
+    
+    custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
 
-  custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
-  await copyS3EventNotifications(config, processCurrentEnv);
-  custom_logging(chalk.green("Process completed"));
+    await copyS3EventNotifications(config, processCurrentEnv);
+    custom_logging(chalk.green("Process completed successfully"));
+  } catch (error) {
+    custom_logging(chalk.red(`Error in main function: ${error.message}`));
+    process.exit(1);
+  }
 };
 
 mainFunction().catch(error => {
-  custom_logging(chalk.red("Error: ") + error.message);
+  custom_logging(chalk.red("Uncaught Error: ") + error.message);
   process.exit(1);
 });

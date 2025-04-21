@@ -83,3 +83,5 @@ When enabled, the script disables rules in the currently active environment, ens
 #### Targeted Modifications:
 Only Cloudwatch rules specified in the configuration file are affected.
 AWS-managed rules are automatically skipped to prevent accidental modification of system rules.
+#### Process Common Config
+Includes the common folder client for configuration, otherwise the jenkins pipeline would not handle any clients.

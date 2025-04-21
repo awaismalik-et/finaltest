@@ -19,10 +19,10 @@ AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   sessionToken: process.env.AWS_SESSION_TOKEN,
-maxRetries: 5, // Maximum number of retries
-    retryDelayOptions: { 
-        base: 200 // Base delay in milliseconds
-    }
+  maxRetries: 5, // Maximum number of retries
+  retryDelayOptions: { 
+    base: 200 // Base delay in milliseconds
+  }
 })
 
 const processLambdaTriggers = async (environmentConfig) => {
@@ -65,6 +65,8 @@ const mainFunction = async () => {
     .parse(process.argv);
     
     const options = program.opts();
+
+    global.SLEEP_TIME = 1000;
     
     if (options.dryRun) {
         global.DRY_RUN = true;
@@ -80,10 +82,8 @@ const mainFunction = async () => {
         custom_logging(chalk.yellow("Current environment will not be processed"));
     }
 
-    let commonFile = path.resolve(__dirname, '..', '..', 'configuration', 'common', 'lambda', 'configuration.json');
     let clientFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'lambda', 'configuration.json');
     
-    await processFiles(commonFile);
     await processFiles(clientFile);
     
 

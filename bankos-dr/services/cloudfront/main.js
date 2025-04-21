@@ -114,9 +114,10 @@ const mainFunction = async () => {
     program
     .version('0.0.1')
     .option('-dr --dryRun', "Dry run the process")
-    .option('-pce --processCurrentEnvironment', "Whether to perform the process on current environment")
-
+    
     .parse(process.argv);
+
+    global.SLEEP_TIME = 1000;
     
     const options = program.opts();
     
@@ -127,20 +128,9 @@ const mainFunction = async () => {
         custom_logging(chalk.red("DRY RUN is disabled"));
     }
 
-    if (options.processCurrentEnvironment) {
-        global.PROCESS_CURRENT_ENVIRONMENT = true;
-        custom_logging(chalk.red("Current environment will be processed"));
-    } else {
-        custom_logging(chalk.yellow("Current environment will not be processed"));
-    }
-
-    let commonFile = path.resolve(__dirname, '..', '..', 'configuration', 'common', 'cloudfront', 'configuration.json');
     let clientFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'cloudfront', 'configuration.json');
-    
-    await processFiles(commonFile);
     await processFiles(clientFile);
     
-
     custom_logging(chalk.green("Process has been completed"));
 }    
 

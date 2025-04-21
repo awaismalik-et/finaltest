@@ -1,0 +1,26 @@
+{
+    "active_region": "us-east-1",
+    "failover_region": "us-east-1",
+    "cloudfront": [
+        {
+            "id": "E1SNNJ5AA96CA3",
+            "behaviors": [
+                {
+                    "path": "Default",
+                    "active_origin": "finzly-accountopening-s3-uat.s3-website-us-east-1.amazonaws.com",
+                    "failover_origin": "finzly-accountopening-s3-DR.s3-website-us-east-1.amazonaws.com"
+                },
+                {
+                    "path": "/flow*",
+                    "active_origin": "finzly-accountopening-s3-uat.s3-website-us-east-1.amazonaws.com",
+                    "failover_origin": "finzly-accountopening-s3-DR.s3-website-us-east-1.amazonaws.com"
+                },
+                {
+                    "path": "/api*",
+                    "active_origin": "ELB-finzly-eks-cashos-udr-lb",
+                    "failover_origin": "ELB-finzly-eks-cashos-DR-lb"
+                }
+            ]
+        }
+    ]
+}

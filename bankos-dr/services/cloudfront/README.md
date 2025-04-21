@@ -1,15 +1,14 @@
 # Cloudfront Switching
 
 ## Overview
-This script (run-cloudfront.js) is designed to automate the switching of CloudFront behaviors and origins between Active and Failover environments. It ensures that during a failover event or environment restoration, CloudFront distributions are updated to serve traffic from the correct environment (Active or Failover).
+This script (main.js) is designed to automate the switching of CloudFront behaviors and origins between Active and Failover environments. It ensures that during a failover event or environment restoration, CloudFront distributions are updated to serve traffic from the correct environment (Active or Failover).
 
 The script also supports a dry-run mode for safe testing and a flag to decide whether to process the current environment, both of which are dynamically controlled via the Jenkins pipeline (Jenkinsfile).
 
 
-
 ## How It Works
 Configuration Check
-Before execution, run-cloudfront.js performs the following checks:
+Before execution, main.js performs the following checks:
 
 ### DRY_RUN mode: 
 
@@ -19,6 +18,31 @@ Process Current Environment:
 To decide whether to apply changes to the currently active environment as part of the switching.
 
 Both options are injected dynamically via Jenkins during pipeline execution to control the script's behavior in different deployment scenarios.
+
+## Multi-Client Handling
+
+This script supports processing **multiple clients dynamically** based on the CLIENT_NAME parameter passed through the Jenkins pipeline.
+
+### How It Works
+
+The CLIENT_NAME parameter can be set to:
+  - A specific client name (e.g., `FED`, `RTP`, etc.)
+  - `All` — which triggers the script to run for all configured clients.
+
+Additionally, enabling `PROCESS_COMMON_CONFIG` will add the **common configuration** to the client list for processing.
+
+### Example Behaviors
+
+| CLIENT_NAME | PROCESS_COMMON_CONFIG | Clients Processed                                      |
+|-------------|------------------------|--------------------------------------------------------|
+| `FED`       | `false`                | `FED`                                                  |
+| `All`       | `false`                | `FED`, `RTP`, `FED-ACH`, `sample-client`              |
+| `All`       | `true`                 | `FED`, `RTP`, `FED-ACH`, `sample-client`, `common`    |
+| `RTP`       | `true`                 | `RTP`, `common`                                        |
+
+For each client in the list:
+- The script will be executed separately.
+- CloudFront configurations will be updated as needed.
 
 ### Switching Logic
 #### Switching from Active to Failover Region
@@ -71,9 +95,4 @@ All other distribution settings remain unaffected.
 #### DRY_RUN Mode:
 
 When enabled, all planned actions are logged but no real changes are applied to CloudFront distributions — useful for testing and validation.
-
-#### Process Current Environment:
-
-When enabled, the script can also update and clean up settings related to the current active environment, making the switching process complete and consistent.
-
 

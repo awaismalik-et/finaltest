@@ -102,6 +102,8 @@ const mainFunction = async () => {
     .option('-pce --processCurrentEnvironment', "Whether to perform the process on current environment")
 
     .parse(process.argv);
+
+    global.SLEEP_TIME = 1000; 
     
     const options = program.opts();
     if (options.dryRun) {
@@ -118,10 +120,8 @@ const mainFunction = async () => {
         custom_logging(chalk.yellow("Current environment will not be processed"));
     }
 
-    let commonFile = path.resolve(__dirname, '..', '..', 'configuration', 'common', 'cloudwatch', 'configuration.json');
     let clientFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'cloudwatch', 'configuration.json');
 
-    await processFiles(commonFile)
     await processFiles(clientFile)
     custom_logging(chalk.green("Process has been completed"));
 }    

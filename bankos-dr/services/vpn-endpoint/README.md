@@ -1,9 +1,34 @@
 # VPN Endpoint Route Switching
 
 ## Overview
-This script (run-vpn.js) is designed to automate the switching of IP routes between Active and Failover VPN endpoints across AWS regions. It ensures that IP routes are properly transferred between environments during failover events or environment restoration.
+This script (main.js) is designed to automate the switching of IP routes between Active and Failover VPN endpoints across AWS regions. It ensures that IP routes are properly transferred between environments during failover events or environment restoration.
 
 The script dynamically determines whether to perform actual changes or simulate them based on environment variables passed through the Jenkins pipeline (Jenkinsfile).
+
+## Multi-Client Handling
+
+This script supports processing **multiple clients dynamically** based on the CLIENT_NAME parameter passed through the Jenkins pipeline.
+
+### How It Works
+
+The CLIENT_NAME parameter can be set to:
+  - A specific client name (e.g., `FED`, `RTP`, etc.)
+  - `All` — which triggers the script to run for all configured clients.
+
+Additionally, enabling `PROCESS_COMMON_CONFIG` will add the **common configuration** to the client list for processing.
+
+### Example Behaviors
+
+| CLIENT_NAME | PROCESS_COMMON_CONFIG | Clients Processed                                      |
+|-------------|------------------------|--------------------------------------------------------|
+| `FED`       | `false`                | `FED`                                                  |
+| `All`       | `false`                | `FED`, `RTP`, `FED-ACH`, `sample-client`              |
+| `All`       | `true`                 | `FED`, `RTP`, `FED-ACH`, `sample-client`, `common`    |
+| `RTP`       | `true`                 | `RTP`, `common`                                        |
+
+For each client in the list:
+- The script will be executed separately.
+- VPN-Endpoint configurations will be updated as needed.
 
 ## How It Works
 ### Configuration Check

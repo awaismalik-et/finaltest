@@ -8,7 +8,7 @@
             "arn": "arn:aws:lambda:us-east-1:489994096722:function:dani-jenkins-v-1",
             "buckets": [
                 {
-                    "name": "daniyal-test-v1",
+                    "name": "dani-test-v1",
                     "eventName": "test-event",
                     "events": [
                         "s3:ReducedRedundancyLostObject",
@@ -26,7 +26,7 @@
             "arn": "arn:aws:lambda:us-east-2:489994096722:function:dani-lambda-04",
             "buckets": [
                 {
-                    "name": "daniyal-test-v4",
+                    "name": "dani-test-v4",
                     "eventName": "abdullah-slack-eventbridge",
                     "events": [
                         "s3:ReducedRedundancyLostObject",

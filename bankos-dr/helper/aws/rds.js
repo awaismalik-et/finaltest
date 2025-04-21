@@ -34,7 +34,7 @@ const createReadReplica = async (rdsClient, createReadReplicaParams) => {
 
     let response = await rdsClient.createDBInstanceReadReplica(createReadReplicaParams).promise()  
     while(response.DBInstance.DBInstanceStatus != "available") {
-        custom_logging(chalk.yellow(`waiting for ${createReadReplicaParams.DBInstanceIdentifier} db instance to be in available state`));
+        custom_logging(chalk.yellow(`Waiting for ${createReadReplicaParams.DBInstanceIdentifier} db instance to be in available state...`));
         await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME * 60));
         response = await rdsClient.describeDBInstances({DBInstanceIdentifier: createReadReplicaParams.DBInstanceIdentifier}).promise()
         response = {
@@ -61,6 +61,46 @@ const describeDBProxies =async (rdsClient, getDbInstanceDetailsparams) => {
     return response
 }
 
+const describeDBProxyTargetGroups = async (rdsClient, params) => {
+    try {
+        const result = await rdsClient.describeDBProxyTargetGroups(params).promise();
+        return result;
+    } catch (error) {
+        console.error(`Error describing DB proxy target groups: ${error.message}`);
+        throw error;
+    }
+};
+
+const describeDBProxyTargets = async (rdsClient, params) => {
+    try {
+        const result = await rdsClient.describeDBProxyTargets(params).promise();
+        return result;
+    } catch (error) {
+        console.error(`Error describing DB proxy targets: ${error.message}`);
+        throw error;
+    }
+};
+
+const deregisterDBProxyTargets = async (rdsClient, params) => {
+    try {
+        const result = await rdsClient.deregisterDBProxyTargets(params).promise();
+        return result;
+    } catch (error) {
+        console.error(`Error deregistering DB proxy targets: ${error.message}`);
+        throw error;
+    }
+};
+
+const registerDBProxyTargets = async (rdsClient, getDbProxyTargetsparams) => {
+    try {
+        const result = await rdsClient.registerDBProxyTargets(getDbProxyTargetsparams).promise();
+        return result;
+    } catch (error) {
+        console.error(`Error registering DB proxy target: ${error.message}`);
+        throw error;
+    }
+};
+
 const updateRDSProxy =async (rdsClient, getDbInstanceDetailsparams) => {
     let response = await rdsClient.modifyDBProxy(getDbInstanceDetailsparams).promise();
     return response
@@ -78,5 +118,9 @@ module.exports = {
     createReadReplica,
     describeDBInstances,
     describeDBProxies,
-    updateRDSProxy
+    updateRDSProxy,
+    registerDBProxyTargets,
+    describeDBProxyTargetGroups,
+    describeDBProxyTargets,
+    deregisterDBProxyTargets
 };

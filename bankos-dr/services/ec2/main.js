@@ -65,8 +65,16 @@ const mainFunction = async () => {
     .parse(process.argv);
 
   const options = program.opts();
+
+  global.SLEEP_TIME = 1000;
   
-  const file = path.resolve(__dirname, '..', '..', 'configuration', "common", 'ec2', 'configuration.json');
+  const file = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'ec2', 'configuration.json');
+
+  if (!fs.existsSync(file)) {
+    custom_logging(chalk.red(`Configuration file not found for client: ${process.env.CLIENT_NAME}`));
+    return;
+  }
+
   let envs = await readAndParseFile(file);
   envs['switching_to'] = process.env.SWITCHING_TO;
 

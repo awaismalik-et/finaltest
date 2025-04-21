@@ -1,14 +1,10 @@
 {
   "active_region": "us-east-1",
   "failover_region": "us-east-2",
-  "triggers": [
+  "buckets": [
     {
       "active_bucket": "dani-test-1",
       "failover_bucket": "dani-test-2"
-    },
-    {
-      "active_bucket": "dani-test-3",
-      "failover_bucket": "dani-test-4"
     }
   ]
 }

@@ -66,6 +66,7 @@ const mainFunction = async () => {
     .option('-pce --processCurrentEnvironment', "Whether to perform the process on current environment")
 
     .parse(process.argv);
+    global.SLEEP_TIME = 1000;
     
     const options = program.opts();
     const file = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'vpn_endpoint', 'configuration.json');

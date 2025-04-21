@@ -11,7 +11,7 @@ pipeline {
 
         booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Check this to run the pipeline in dry run mode')
         booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
-
+        booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
     }
     stages {
         stage('Install Node.js and Packages') {
@@ -28,19 +28,31 @@ pipeline {
                     env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
                     env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
-                 
-                    def command = "node bankos-dr/services/cloudwatch-rules/main.js"
-
                     env.SWITCHING_TO = params.SWITCHING_TO
-
-                    if (params.DRY_RUN) {
-                        command += ' -dr'
-                    }
-                    if (params.PROCESS_CURRENT_ENV) {
-                        command += ' -pce'
+                 
+                    def clientsToProcess = []
+                    if (params.PROCESS_COMMON_CONFIG) {
+                        clientsToProcess.add('common')
                     }
 
-                    sh command
+                    if (clientsToProcess.size() > 0) {
+                        for (client in clientsToProcess) {
+                            def command = "node bankos-dr/services/cloudwatch-rules/main.js"
+                            env.CLIENT_NAME = client
+
+                            if (params.DRY_RUN) {
+                                command += ' -dr'
+                            }
+                            if (params.PROCESS_CURRENT_ENV) {
+                                command += ' -pce'
+                            }
+
+                            echo "Running for client: ${client}"
+                            sh command
+                        }
+                    } else {
+                        echo "No clients to process. Skipping node script execution."
+                    }
                 }
             }
         }
