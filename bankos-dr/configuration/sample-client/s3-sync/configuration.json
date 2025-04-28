@@ -1,0 +1,10 @@
+{
+  "active_region": "us-east-1",
+  "failover_region": "us-west-1",
+  "buckets": [
+    {
+      "active_bucket": "anil-testing-prod",
+      "failover_bucket": "anil-testing-dr"
+    }
+  ]
+}

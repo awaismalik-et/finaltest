@@ -1,12 +1,7 @@
 pipeline {
-    agent {
-        docker {
-            label 'bankos'
-            image 'build-agent:1.0.2-jdk17'
-            registryUrl 'https://docker.finzly.net'
-            registryCredentialsId 'nexus-creds'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
+    agent any
+    environment {
+        CONFIG_FILE = './transfer-family/configuration.json'
     }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
@@ -15,7 +10,7 @@ pipeline {
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
 
-        booleanParam(name: 'PROCESS_CURRENT_ENV', defaultValue: false, description: 'Check this to process current environment')
+        booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Check this to run the pipeline in dry run mode')
         booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
     }
 
@@ -29,14 +24,12 @@ pipeline {
             }
         }
 
-        stage('Process Configuration') {
+        stage('Load and Process Configuration') {
             steps {
                 script {
                     env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
                     env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
-
-                    // Set environment variables
                     env.SWITCHING_TO = params.SWITCHING_TO
 
                     def clientsToProcess = []
@@ -49,13 +42,13 @@ pipeline {
                     if (params.PROCESS_COMMON_CONFIG) {
                         clientsToProcess.add('common')
                     }
-                    
+
                     for (client in clientsToProcess) {
-                        def command = "node bankos-dr/services/rds/main.js"
+                        def command = "node bankos-dr/services/transfer-family/main.js"
                         env.CLIENT_NAME = client
 
-                        if (params.PROCESS_CURRENT_ENV) {
-                            command += ' -pce'
+                        if (params.DRY_RUN) {
+                            command += ' -dr'
                         }
 
                         echo "Running for client: ${client}"
@@ -63,12 +56,6 @@ pipeline {
                     }
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            cleanWs()  // Clean up workspace after the pipeline execution
         }
     }
 }

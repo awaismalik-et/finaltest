@@ -1,4 +1,18 @@
 {
   "active_region": "us-east-1",
-  "failover_region": "us-east-2"
+  "failover_region": "us-east-2",
+  "excluded_rules": {
+    "active_region": [
+      {
+        "bus_name": "default",
+        "rule_names": ["codepipeline-rameez-master-134829-rule", "fsl-tst-rule"]
+      }
+    ],
+    "failover_region": [
+      {
+        "bus_name": "default",
+        "rule_names": ["ab-test", "adding-users-test-danial"]
+      }
+    ]
+  }
 }

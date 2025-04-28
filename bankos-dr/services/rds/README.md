@@ -53,19 +53,16 @@ Active RDS configuration — Details for RDS in Active region.
 Failover RDS configuration — Details for RDS in Failover region.
 
 ### Actions performed:
-If there are no replica in the failover region and both the primary instance and the replica exists in the active region. Then, the code will check this through the `replica_configuration` object in the `configuration.json`. If the replica_configuration has an identifier in it, this means the replica and the primary instance are in the active region. Then,
-the first action would be to create a replica in the failover region from the primary instance in the active region.
+If the active RDS instance have read replica already configured with the source, then the configuration.json should have a
+`replica_configuration` object in the active configuration only, having identifier value which is the name of the read replica of the primary instance in active region. This name would be used to check the name of the replica of a database instance if a instance that has to be cloned in the other region if there is no replica, simply omit defining the `replica_configuration` object in the configuration. It can be defined either in active configuration or failover configuration depending upon the switch th econfiguration.json should be handled correctly.
 
-Promote Failover RDS to be the new standalone primary instance (remove replication status if it was a replica).
+Also, checks if the `replica_configuration` identifier is correct, otherwise if its incorrect, the pipeline will give an error
 
-update the proxy in the failover region
-This ensures that:
+The replica should always exist, otherwise the program will stop by saying the read replica doesnt exist. Then, we create a read replica of the newly promoted instance. Now, there are a primary and replica in both regions. The proxies are updated and pointed as well. Now if we have checked the `process_current_environment` flag in the jenkinsfile then the failover region database group primary instance would have a timestamp appended to it. And the replica of the freshly promoted instance in the failover region creates a read replica in the active region 
 
-Failover RDS becomes the new primary instance, ready to handle production traffic.
-Active region RDS remains untouched unless a manual restoration is triggered later.
+The read replica should always exists, in case of a single instance DB as well and then it promotes and updates proxies. If `process_current_environment` is checked then we rename the instance with timestamp appended to it and the read replica of failover in active region creation happens.
 
-The previous RDS instane has "old" appended to its name
-The read replica of the newly promoted RDS is made in the active region 
+
 ### Note:
 Only the RDS instances defined in the configuration are modified.
 No other RDS instances or databases are affected.
@@ -80,38 +77,18 @@ Active RDS configuration — Target configuration for Active region.
 Failover RDS configuration — Current running RDS in Failover region.
 
 ### Actions performed:
-Check if an RDS instance already exists in the Active region:
+If the failover RDS instance have read replica already configured with the source, then the configuration.json should have a
+`replica_configuration` object, having identifier value which is the name of the read replica of the primary instance in failover.
 
-If it exists and force_delete is false →  Fail the operation to avoid accidental overrides.
+The replica should always exist, otherwise the program will stop by saying the read replica doesnt exist. Then, we create a read replica of the newly promoted instance. Then, we create a read replica of the newly promoted instance. Now, there are a primary and replica in both regions. The proxies are updated and pointed as well. Now if we have checked the `process_current_environment` flag in the jenkinsfile then the failover region database group primary instance would have a timestamp appended to it. And the replica of the freshly promoted instance in the active region creates a read replica in the failover region 
 
-If it exists and force_delete is true →  Delete the existing Active RDS.
-
-Create a replica of the Failover RDS in the Active region.
-
-Promote the new Active RDS to a standalone instance.
-
-Update the proxy to point to the freshly promoted instance.
-
-Prompt user to confirm updating application configuration (e.g., connection strings, endpoints).
-
-Active region RDS becomes the new primary.
-
-Failover RDS name is now appended with "old" to be identifed as a old version and  with a fresh replica of the new Active RDS, maintaining high availability.
+If there is only a primary instance in failover, then it checks if the read replica exists in the active, if it does it promotes and if it doesn't it would throw an error and then promotes the replica and updates proxies. If `process_current_environment` is checked then it rename the instance with timestamp appended to it and the read replica of active in failover creation happens.
 
 ### Note:
 Only the RDS instances defined in the configuration are affected.
-All actions are subject to force_delete flag and explicit user confirmation.
-
 
 ### Important Notes
 
 #### Process Current Environment:
 
 When enabled, the script can also update and clean up settings related to the current active environment, making the switching process complete and consistent.
-
-#### Force Delete Handling:
-The force_delete flag governs whether an existing RDS instance in Active region can be automatically deleted to allow failover switching:
-
-true: Allows deletion and re-creation.
-
-false: Prevents deletion and fails the process if RDS exists.

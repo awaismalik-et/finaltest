@@ -4,18 +4,24 @@
     "rds":[
         {
             "active_configurations": {
-                "identifier": "prod-test-2",
+                "identifier": "prod-test",
                 "kms_key_id": "f9b12014-d9e4-4ce4-92f4-5759ae911fc4",
                 "subnet_group_name":"default-vpc-0cb59b4e816ae855e",
                 "security_group_ids":["sg-04dd7b70627de9bb3"],
-                "proxy_name": "prod-test-proxy"
+                "proxy_name": "prod-test-proxy",
+                "replica_configuration": {
+                    "identifier": "prod-test-readonly"
+                }
             },
             "failover_configurations": {
-                "identifier": "prod-test-2",
+                "identifier": "prod-test",
                 "kms_key_id": "e184478d-7a82-46c6-8585-bdf2ac90e0c3",
                 "subnet_group_name":"default-vpc-0799a47f1563abf96",
                 "security_group_ids":["sg-0dfd2b5c32c7aa9e0"],
-                "proxy_name": "prod-test-proxy"
+                "proxy_name": "prod-test-proxy",
+                "replica_configuration": {
+                    "identifier": "prod-test-readonly"
+                }
             }
         }
     ]

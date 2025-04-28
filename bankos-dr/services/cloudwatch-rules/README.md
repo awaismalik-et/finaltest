@@ -28,6 +28,8 @@ The script reads a common configuration file to obtain:
 
 List of Cloudwatch rules in both Active and Failover regions.
 ### Actions performed:
+Excludes the rules of specified buses to not be processed that are mentioned in the configuration.json
+
 List all EventBridge event buses and rules in the Failover region.
 
 Enable all relevant Cloudwatch rules in the Failover region.
@@ -54,6 +56,8 @@ The script reads the same common configuration file to obtain:
 List of Cloudwatch rules in both Failover and Active regions.
 
 ### Actions performed:
+Excludes the rules of specified buses to not be processed that are mentioned in the configuration.json
+
 List all EventBridge event buses and rules in the Active region.
 
 Enable all relevant Cloudwatch rules in the Active region.

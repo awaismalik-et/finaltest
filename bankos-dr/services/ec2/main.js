@@ -35,22 +35,25 @@ const processEC2Instances = async (ec2Settings) => {
   let drInstanceIds = [];
   prodInstanceIds = ec2Settings.active_instance_id;
   drInstanceIds = ec2Settings.failover_instance_id;
-  try {
 
+  try {
     if (ec2Settings.switching_to === "ACTIVE") {
       await startEC2Instances(active_ec2, prodInstanceIds);
       custom_logging(chalk.green('Started ACTIVE REGION Instances'));
 
-      await stopEC2Instances(failover_ec2, drInstanceIds);
-      custom_logging(chalk.green('Stopped FAILOVER REGION Instances'));
-    } 
-    
+      if (global.PROCESS_CURRENT_ENVIRONMENT) {
+        await stopEC2Instances(failover_ec2, drInstanceIds);
+        custom_logging(chalk.green('Stopped FAILOVER REGION Instances'));
+      }
+    }
     else {
       await startEC2Instances(failover_ec2, drInstanceIds);
       custom_logging(chalk.green('Started FAILOVER REGION Instances'));
-
-      await stopEC2Instances(active_ec2, prodInstanceIds);
-      custom_logging(chalk.green('Stopped ACTIVE REGION Instances'));
+      
+      if (global.PROCESS_CURRENT_ENVIRONMENT) {
+        await stopEC2Instances(active_ec2, prodInstanceIds);
+        custom_logging(chalk.green('Stopped ACTIVE REGION Instances'));
+      }
     }
   } catch (error) {
     custom_logging(chalk.red('Error managing instances: ') + error.message);

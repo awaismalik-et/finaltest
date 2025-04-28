@@ -1,10 +1,18 @@
 {
   "active_region": "us-east-1",
-  "failover_region": "us-east-2",
+  "failover_region": "us-west-1",
   "buckets": [
     {
-      "active_bucket": "dani-test-1",
-      "failover_bucket": "dani-test-2"
+      "active_bucket": "anil-testing-prod",
+      "failover_bucket": "anil-testing-dr"
+    },
+    {
+      "active_bucket": "anil-testing-prod-1",
+      "failover_bucket": "anil-testing-dr-1"
+    },
+    {
+      "active_bucket": "anil-testing-prod-2",
+      "failover_bucket": "anil-testing-dr-2"
     }
   ]
 }

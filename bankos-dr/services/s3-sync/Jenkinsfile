@@ -1,5 +1,13 @@
 pipeline {
-    agent any
+    agent {
+            docker {
+                label 'bankos'
+                image 'build-agent:1.0.2-jdk17'
+                registryUrl 'https://docker.finzly.net'
+                registryCredentialsId 'nexus-creds'
+                args '-v /var/run/docker.sock:/var/run/docker.sock'
+            }
+        }
     environment {
         CONFIG_FILE = 'bankos-dr/configuration/common/s3-sync/configuration.json'
     }
