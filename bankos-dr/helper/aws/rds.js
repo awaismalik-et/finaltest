@@ -3,9 +3,39 @@ const chalk = require('chalk');
 const AWS = require('aws-sdk');
 const prompt = require('prompt-sync')();
 
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+  
+function createDelayedClient(ClientClass, options, delayMs) {
+    const client = new ClientClass(options); 
+    return new Proxy(client, {
+      get(target, propKey, receiver) {
+        const origMethod = target[propKey];
+        // Only wrap functions (API methods)
+        if (typeof origMethod === 'function') {
+          return (...args) => {
+            const request = origMethod.apply(target, args);
+            if (request && typeof request.promise === 'function') {
+              // Wrap `.promise()` with a delay
+              const origPromise = request.promise.bind(request);
+              request.promise = async () => {
+                await delay(delayMs);
+                return origPromise();
+              };
+            }
+            return request;
+          };
+        }
+        // Non-function properties are returned directly
+        return origMethod;
+      }
+    });
+}
+
 const initializeRdsClients = (environmentConfig) => {
-    activeRdsClient = new AWS.RDS({ region: environmentConfig.active_region });
-    failoverRdsClient = new AWS.RDS({ region: environmentConfig.failover_region });
+    activeRdsClient = createDelayedClient(AWS.RDS, { region: environmentConfig.active_region }, global.SLEEP_TIME);
+    failoverRdsClient = createDelayedClient(AWS.RDS, { region: environmentConfig.failover_region }, global.SLEEP_TIME);
     return {
         activeRdsClient,
         failoverRdsClient
@@ -43,7 +73,7 @@ const createReadReplica = async (rdsClient, createReadReplicaParams) => {
     }
 }
 
-const promoteReadReplica =async (rdsClient, promoteReadReplicationParams) => {
+const promoteReadReplica = async (rdsClient, promoteReadReplicationParams) => {
 
     let response = await rdsClient.promoteReadReplica(promoteReadReplicationParams).promise()
     await new Promise(resolve => setTimeout(resolve, global.SLEEP_TIME * 60));
@@ -56,7 +86,7 @@ const promoteReadReplica =async (rdsClient, promoteReadReplicationParams) => {
     }
 }
 
-const describeDBProxies =async (rdsClient, getDbInstanceDetailsparams) => {
+const describeDBProxies = async (rdsClient, getDbInstanceDetailsparams) => {
     let response = await rdsClient.describeDBInstances({DBInstanceIdentifier: getDbInstanceDetailsparams.DBInstanceIdentifier}).promise();
     return response
 }

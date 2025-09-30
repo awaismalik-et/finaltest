@@ -195,18 +195,27 @@ const modifyDBInstanceIdentifier = async (rds, dbInstanceIdentifier) => {
     }
 };
 
-const processRds = async (environmentConfig) => {
+const processRds = async (environmentConfig, rdsIndex = null) => {
     custom_logging(chalk.green("Starting process on RDS"));
     const { activeRdsClient, failoverRdsClient } = initializeRdsClients(environmentConfig);
     const sts = new AWS.STS();
     try {
-        for (let rdsConfig of environmentConfig.rds) {
+        let rdsConfigsToProcess = environmentConfig.rds;
+        if (rdsIndex !== null && rdsIndex >= 0 && rdsIndex < environmentConfig.rds.length) {
+            custom_logging(chalk.green(`Processing only RDS resource at index ${rdsIndex}`));
+            rdsConfigsToProcess = [environmentConfig.rds[rdsIndex]];
+        } else if (rdsIndex !== null) {
+            custom_logging(chalk.yellow(`RDS index ${rdsIndex} is out of bounds. There are ${environmentConfig.rds.length} RDS resources in the configuration.`));
+            return;
+        }
+        
+        for (let rdsConfig of rdsConfigsToProcess) {
             if (environmentConfig.switching_to == "ACTIVE") {
                 custom_logging(`Checking if ${rdsConfig.active_configurations.identifier} already exists in ${environmentConfig.active_region}`);
                 let getDbInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.active_configurations.identifier }
                 let dbInstanceDetails = await checkIfRdsExists(activeRdsClient, getDbInstanceDetailsparams)
 
-                if (!dbInstanceDetails) {
+                if (!dbInstanceDetails){
                     custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} does not exist, which is unexpected as first replica should always be there...`));
                     throw new Error(`Required replica ${rdsConfig.active_configurations.identifier} does not exist in ${environmentConfig.active_region}`);
                 }
@@ -309,7 +318,6 @@ const processRds = async (environmentConfig) => {
                 }
 
                 custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is now the primary in ${environmentConfig.active_region}`));
-                
                 if (global.PROCESS_CURRENT_ENVIRONMENT) {
                     custom_logging(chalk.yellow(`${rdsConfig.active_configurations.identifier} is now a read replica in ${environmentConfig.failover_region}`));
                 }
@@ -317,7 +325,7 @@ const processRds = async (environmentConfig) => {
             else {
                 let getFailoverInstanceDetailsparams = { DBInstanceIdentifier: rdsConfig.failover_configurations.identifier }
                 let failoverdbInstaceDetails = await checkIfRdsExists(failoverRdsClient, getFailoverInstanceDetailsparams)
-                if (!failoverdbInstaceDetails) {
+                if (!failoverdbInstaceDetails){
                     custom_logging(chalk.yellow(`${rdsConfig.failover_configurations.identifier} does not exist, which is unexpected as first replica should always be there...`));
                     throw new Error(`Required replica ${rdsConfig.failover_configurations.identifier} does not exist in ${environmentConfig.failover_region}`);
                 }
@@ -444,7 +452,12 @@ const processFiles = async (file, options) => {
         ...rdsConfig
     }));
     custom_logging(`Switching to ${chalk.green(configuration.switching_to)} environment`)
-    await processRds(configuration)
+    
+    if (options.rdsIndex !== undefined) {
+        await processRds(configuration, parseInt(options.rdsIndex));
+    } else {
+        await processRds(configuration);
+    }
 };
 
 const mainFunction = async () => {
@@ -452,11 +465,12 @@ const mainFunction = async () => {
         .version('0.0.1')
         .option('-dr --dryRun', "Dry run the process")
         .option('-pce --processCurrentEnvironment', "Whether to perform the process on current environment")
-
+        .option('--rds-index <index>', 'Specify the index of RDS resource to process')
         .parse(process.argv);
     
     global.SLEEP_TIME = 1000;
     const options = program.opts();
+    
     if (options.dryRun) {
         global.DRY_RUN = true;
         custom_logging(chalk.yellow("DRY RUN is enabled"))
@@ -470,6 +484,12 @@ const mainFunction = async () => {
     }
     else
         custom_logging(chalk.yellow("Current environment will not be processed"))
+
+    if (options.rdsIndex !== undefined) {
+        custom_logging(chalk.green(`Processing only RDS resource at index: ${options.rdsIndex}`));
+    } else {
+        custom_logging(chalk.yellow("Processing all RDS resources"));
+    }
 
     let clientFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'rds', 'configuration.json');
     await processFiles(clientFile, options);
