@@ -1,3 +1,4 @@
+@Library('client-shared-config') _
 def  failoverLambdaFunctionArray= ['test-function-waqar']
 def  activeLambdaFunctionArray= ['dani-test-function']
 
@@ -8,7 +9,7 @@ pipeline {
     }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        choice(name: 'CLIENT_NAME', choices: ['All', 'ach', 'fedwire', 'fednow','rtp', 'sample-client','udr'], description: 'Select the CLIENT_NAME')
+        choice(name: 'CLIENT_NAME', choices: (['None', 'All'] + clientConfig.getAllClients()).join('\n'), description: 'Select the CLIENT_NAME')
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
@@ -38,8 +39,12 @@ pipeline {
 
                     def clientsToProcess = []
                     if (params.CLIENT_NAME == 'All') {
-                        clientsToProcess = ['ach', 'fedwire', 'fednow','rtp', 'sample-client','udr']
-                    } else {
+                        clientsToProcess = clientConfig.getAllClients()
+                    } 
+                    else if (params.CLIENT_NAME == 'None') {
+                        echo 'Skipping: No client selected'
+                    }
+                    else {
                         clientsToProcess = [params.CLIENT_NAME]
                     }
 

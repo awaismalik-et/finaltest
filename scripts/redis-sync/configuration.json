@@ -1,0 +1,34 @@
+{
+  "redis": [
+    {
+      "active_server": {
+        "endpoint": "clustercfg.awais-test1-cluster.gofazy.use1.cache.amazonaws.com",
+        "port": 6379
+      },
+      "failover_server": {
+        "endpoint": "clustercfg.awais-test2-cluster.gofazy.use1.cache.amazonaws.com",
+        "port": 6379
+      }
+    },
+    {
+      "active_server": {
+        "endpoint": "awais-rediscluster-east-1.gofazy.clustercfg.use1.cache.amazonaws.com",
+        "port": 6379
+      },
+      "failover_server": {
+        "endpoint": "awais-redis-cluster-2.gofazy.clustercfg.use1.cache.amazonaws.com",
+        "port": 6379
+      }
+    },
+    {
+      "active_server": {
+        "endpoint": "awais-rediscluster-east-1.gofazy.clustercfg.use1.cache.amazonaws.com",
+        "port": 6379
+      },
+      "failover_server": {
+        "endpoint": "awais-redis-cluster-2.gofazy.clustercfg.use1.cache.amazonaws.com",
+        "port": 6379
+      }
+    }
+  ]
+}

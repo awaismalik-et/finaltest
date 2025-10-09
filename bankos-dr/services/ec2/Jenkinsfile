@@ -1,11 +1,21 @@
+@Library('client-shared-config') _
+
 pipeline {
-    agent any
+    agent {
+        docker {
+            label 'bankos'
+            image 'build-agent:1.0.2-jdk17'
+            registryUrl 'https://docker.finzly.net'
+            registryCredentialsId 'nexus-creds'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
     environment {
         CONFIG_FILE = './ec2-instance/configuration.json'
     }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        choice(name: 'CLIENT_NAME', choices: ['All', 'ach', 'fedwire', 'fednow','rtp', 'sample-client','udr'], description: 'Select the CLIENT_NAME')
+        choice(name: 'CLIENT_NAME', choices: (['None', 'All'] + clientConfig.getAllClients()).join('\n'), description: 'Select the CLIENT_NAME')
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'Enter AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'Enter AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'Enter AWS_SESSION_TOKEN')
@@ -33,8 +43,12 @@ pipeline {
                     
                     def clientsToProcess = []
                     if (params.CLIENT_NAME == 'All') {
-                        clientsToProcess = ['ach', 'fedwire', 'fednow','rtp', 'sample-client','udr']
-                    } else {
+                        clientsToProcess = clientConfig.getAllClients()
+                    } 
+                    else if (params.CLIENT_NAME == 'None') {
+                        echo 'Skipping: No client selected'
+                    }
+                    else {
                         clientsToProcess = [params.CLIENT_NAME]
                     }
 

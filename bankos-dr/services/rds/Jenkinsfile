@@ -1,4 +1,4 @@
-def CLIENT_LIST = ['ach', 'fedwire', 'fednow', 'rtp', 'sample-client', 'udr']
+@Library('client-shared-config') _
 
 pipeline {
     agent {
@@ -12,7 +12,7 @@ pipeline {
     }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        choice(name: 'CLIENT_NAME', choices: ['None', 'All'] + CLIENT_LIST, description: 'Select the CLIENT_NAME')
+        choice(name: 'CLIENT_NAME', choices: (['None', 'All'] + clientConfig.getAllClients()).join('\n'), description: 'Select the CLIENT_NAME')
         text(name: 'CUSTOM_CLIENTS', defaultValue: '', description: 'If provided, only these comma-separated clients will be processed (e.g., ach,fedwire,fednow)')
         
         string(name: 'CLIENTS_BATCH_SIZE', defaultValue: '1', description: 'Number of clients to process in parallel')
@@ -46,9 +46,12 @@ pipeline {
                         clientsToProcess = params.CUSTOM_CLIENTS.split(',').collect { it.trim() }
                     }
                     else if (params.CLIENT_NAME == 'All') {
-                        clientsToProcess = CLIENT_LIST
+                        clientsToProcess = clientConfig.getAllClients()
+                    } 
+                    else if (params.CLIENT_NAME == 'None') {
+                        echo 'Skipping: No client selected'
                     }
-                    else if (params.CLIENT_NAME != 'None') {
+                    else {
                         clientsToProcess = [params.CLIENT_NAME]
                     }
 

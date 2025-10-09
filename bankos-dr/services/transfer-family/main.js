@@ -7,6 +7,7 @@ const path = require('path');
 const readFileAsync = promisify(fs.readFile);
 
 const AWS = require('aws-sdk');
+const route53 = new AWS.Route53();
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -211,6 +212,199 @@ const processTransferUserReplication = async (config) => {
   }
 };
 
+//This function updates the route53 records
+async function updateRoute53Record(hostedZoneId, recordName, newTarget, isPrivate = false) {
+  let recordType, resourceRecords;
+
+  //if private we ue ips and type A
+  if (isPrivate) {
+    recordType = "A";
+    resourceRecords = newTarget.map(ip => ({ Value: ip }));
+  } else {
+    //if public we use endpoint and type CNAME
+    recordType = "CNAME";
+    resourceRecords = [{ Value: newTarget }];
+  }
+
+  //params setting
+  const params = {
+    HostedZoneId: hostedZoneId,
+    ChangeBatch: {
+      Changes: [
+        {
+          Action: "UPSERT",
+          ResourceRecordSet: {
+            Name: recordName,
+            Type: recordType,
+            TTL: 60,
+            ResourceRecords: resourceRecords,
+          },
+        },
+      ],
+    },
+  };
+
+  if (global.DRY_RUN) {
+    custom_logging(chalk.yellow(`[DRY RUN] Would update Route53 ${recordType} record ${recordName} → ${isPrivate ? newTarget.join(", ") : newTarget}`));
+    return;
+  }
+  //resource changing
+  await route53.changeResourceRecordSets(params).promise();
+  custom_logging(chalk.green(`Updated Route53 ${recordType} record ${recordName} → ${isPrivate ? newTarget.join(", ") : newTarget}`));
+}
+
+// Helper to fetch Transfer Family server details
+async function getServerDetails(transferClient, serverId) {
+  try {
+    const { Server } = await transferClient.describeServer({ ServerId: serverId }).promise();
+    const tagsResp = await transferClient.listTagsForResource({ Arn: Server.Arn }).promise();
+
+    const hostnameTag = tagsResp.Tags.find(t => t.Key === "transfer:customHostname");
+    const hostedZoneTag = tagsResp.Tags.find(t => t.Key === "transfer:route53HostedZoneId");
+    const switchingTag = tagsResp.Tags.find(t => t.Key === "SWITCHING_TO");
+
+    //errors for missing tags
+    if (!hostnameTag) throw new Error(`Missing tag transfer:customHostname for ${serverId}`);
+    if (!hostedZoneTag) throw new Error(`Missing tag transfer:route53HostedZoneId for ${serverId}`);
+
+    let endpoint = null;
+    let privateIps = [];
+
+    if (Server.EndpointType === "VPC") {
+      //for private endpoint
+      const ec2 = new AWS.EC2({ region: transferClient.config.region });
+      const vpcEndpointId = Server.EndpointDetails.VpcEndpointId;
+
+      if (!vpcEndpointId) throw new Error(`No VPC endpoint ID for server ${serverId}`);
+
+      const { VpcEndpoints } = await ec2.describeVpcEndpoints({ VpcEndpointIds: [vpcEndpointId] }).promise();
+      if (!VpcEndpoints?.length) throw new Error(`VPC endpoint ${vpcEndpointId} not found`);
+
+      const eniIds = VpcEndpoints[0].NetworkInterfaceIds;
+      const { NetworkInterfaces } = await ec2.describeNetworkInterfaces({ NetworkInterfaceIds: eniIds }).promise();
+
+      privateIps = NetworkInterfaces.flatMap(eni => eni.PrivateIpAddresses.map(ip => ip.PrivateIpAddress));
+    } else {
+      //for public endpoint
+      endpoint = `${serverId}.server.transfer.${transferClient.config.region}.amazonaws.com`;
+    }
+
+    return {
+      serverId,
+      serverArn: Server.Arn,
+      endpoint,
+      privateIps,
+      hostname: hostnameTag.Value,
+      hostedZoneId: hostedZoneTag.Value.replace("/hostedzone/", ""),
+      currentSwitchingTo: switchingTag ? switchingTag.Value : null,
+      isPrivate: Server.EndpointType === "VPC"
+    };
+  } catch (error) {
+    console.error(`Error fetching server details for ${serverId}: ${error.message}`);
+  }
+}
+
+//Helper funtion for swtiching-to tag addition
+async function updateServerTags(transferClient, serverArn, tags) {
+  if (global.DRY_RUN) {
+    custom_logging(chalk.yellow(`[DRY RUN] Would tag ${serverArn} with: ${JSON.stringify(tags)}`));
+    return;
+  }
+  await transferClient.tagResource({ Arn: serverArn, Tags: tags }).promise();
+  custom_logging(chalk.green(`Tagged ${serverArn} with ${tags.map(t => `${t.Key}=${t.Value}`).join(", ")}`));
+}
+
+const swapTransferFamilyHostnames = async (config) => {
+  custom_logging(chalk.blue("Starting Transfer Family hostname swap process"));
+
+  const activeRegion = config.active_region;
+  const failoverRegion = config.failover_region;
+  const servers = config.servers;
+
+  try {
+    for (const serverPair of servers) {
+      const activeTransfer = new AWS.Transfer({ region: activeRegion });
+      const failoverTransfer = new AWS.Transfer({ region: failoverRegion });
+
+      const activeServer = await getServerDetails(activeTransfer, serverPair.active_server.serverId);
+      const failoverServer = await getServerDetails(failoverTransfer, serverPair.failover_server.serverId);
+      
+      //IF we have same switching-to tag we don't need to switch
+      if (activeServer.currentSwitchingTo === config.switching_to && failoverServer.currentSwitchingTo === config.switching_to) {
+        custom_logging(chalk.yellow(`Already in '${config.switching_to}' state. No action needed.`));
+        continue;
+      }
+
+      const updateServerHostnameViaTags = async (transferClient, serverArn, newHostname, hostedZoneId) => {
+        const tagParams = {
+          Arn: serverArn,
+          Tags: [
+            { Key: "transfer:customHostname", Value: newHostname },
+            { Key: "transfer:route53HostedZoneId", Value: `/hostedzone/${hostedZoneId}` },
+          ],
+        };
+
+        if (global.DRY_RUN) {
+          custom_logging(chalk.yellow(`[DRY RUN] Would tag ${serverArn} with hostname ${newHostname} and hosted zone ${hostedZoneId}`));
+          return;
+        }
+
+        await transferClient.tagResource(tagParams).promise();
+        custom_logging(chalk.green(`Tagged ${serverArn} with hostname ${newHostname} and hosted zone ${hostedZoneId}`));
+      };
+
+      // Swapping
+      if (config.switching_to === "ACTIVE") {
+        custom_logging(chalk.yellow("Switching to ACTIVE environment"));
+
+        await updateRoute53Record(
+          failoverServer.hostedZoneId,
+          failoverServer.hostname,
+          activeServer.isPrivate ? activeServer.privateIps : activeServer.endpoint,
+          activeServer.isPrivate
+        );
+        await updateRoute53Record(
+          activeServer.hostedZoneId,
+          activeServer.hostname,
+          failoverServer.isPrivate ? failoverServer.privateIps : failoverServer.endpoint,
+          failoverServer.isPrivate
+        );
+
+        await updateServerHostnameViaTags(failoverTransfer, failoverServer.serverArn, activeServer.hostname, activeServer.hostedZoneId);
+        await updateServerHostnameViaTags(activeTransfer, activeServer.serverArn, failoverServer.hostname, failoverServer.hostedZoneId);
+
+      } else {
+        custom_logging(chalk.yellow("Switching to FAILOVER environment"));
+
+        await updateRoute53Record(
+          activeServer.hostedZoneId,
+          activeServer.hostname,
+          failoverServer.isPrivate ? failoverServer.privateIps : failoverServer.endpoint,
+          failoverServer.isPrivate
+        );
+        await updateRoute53Record(
+          failoverServer.hostedZoneId,
+          failoverServer.hostname,
+          activeServer.isPrivate ? activeServer.privateIps : activeServer.endpoint,
+          activeServer.isPrivate
+        );
+
+        await updateServerHostnameViaTags(activeTransfer, activeServer.serverArn, failoverServer.hostname, failoverServer.hostedZoneId);
+        await updateServerHostnameViaTags(failoverTransfer, failoverServer.serverArn, activeServer.hostname, activeServer.hostedZoneId);
+      }
+
+      // Update SWITCHING_TO tag at the end
+      await updateServerTags(activeTransfer, activeServer.serverArn, [{ Key: "SWITCHING_TO", Value: config.switching_to }]);
+      await updateServerTags(failoverTransfer, failoverServer.serverArn, [{ Key: "SWITCHING_TO", Value: config.switching_to }]);
+    }
+
+    custom_logging(chalk.green("Hostname swap and tagging completed successfully"));
+  } catch (error) {
+    custom_logging(chalk.red(`Error during hostname swap: ${error.message}`));
+  }
+};
+
+
 const mainFunction = async () => {
   program
     .version('0.0.1')
@@ -242,6 +436,9 @@ const mainFunction = async () => {
 
   await processTransferUserReplication(config);
   custom_logging(chalk.green("User replication has been completed"));
+
+  await swapTransferFamilyHostnames(config);
+  custom_logging(chalk.green("Transferring Hostnames has been completed"));
 };
 
 mainFunction()

@@ -1,4 +1,4 @@
-# AWS Transfer Family User Replication
+# AWS Transfer Family Replication
 ## Overview
 This script (transfer-replication.js) is designed to automate the replication of AWS Transfer Family users between Active and Failover environments. It ensures that during a failover event or environment restoration, all users with their appropriate configurations are replicated between the Active and Failover Transfer Family servers.
 The script also supports a dry-run mode for safe testing and a flag to decide whether to process the current environment, both of which are dynamically controlled via the Jenkins pipeline (Jenkinsfile).
@@ -87,6 +87,28 @@ This ensures that:
 - All users from the Failover environment are replicated to the Active environment
 - User access permissions and restrictions are maintained
 - S3 bucket references are updated to point to the correct Active resources
+
+### Transfer Family Server Swap Logic
+
+#### Switching Between Active and Failover Regions
+When switching, the following steps occur:
+
+The script reads the configuration file to obtain:
+
+- Active and Failover Transfer Family server IDs  
+
+##### Actions Performed:
+- Retrieves details (tags, endpoints, IPs) for both servers  
+- Updates **Route 53 records** to point the Active hostname to the Failover endpoint or vice versa  
+- Swaps the `transfer:customHostname` and `transfer:route53HostedZoneId` tags between both servers  
+- Updates the `SWITCHING_TO` tag to reflect the target environment  
+- Supports **dry-run mode** — logs all intended actions without applying any changes  
+
+This ensures that:
+
+- Hostnames and DNS entries accurately reflect the target environment  
+- Failover and Active states remain synchronized for seamless transitions  
+- Metadata and tags stay consistent for future operations
 
 ### Dry Run Mode
 When enabled, all planned actions are logged but no real changes are applied to AWS Transfer Family servers — useful for testing and validation. In dry run mode:
