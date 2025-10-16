@@ -97,7 +97,7 @@ pipeline {
                                                 def resourceIndex = i
                                                 parallelSteps["S3 resource ${ resourceIndex + 1 }"] = {
 
-                                                    def command = "node bankos-dr/services/s3/main.js"
+                                                    def command = "node bankos-dr/services/route53/main.js"
                                                     withEnv([
                                                         "CLIENT_NAME=${currentClient}",
                                                     ]) {
