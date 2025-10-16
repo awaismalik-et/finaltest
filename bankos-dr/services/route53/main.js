@@ -6,8 +6,14 @@ const { promisify } = require('util');
 const chalk = require('chalk');
 const AWS = require('aws-sdk');
 const { awsEnvironment } = require('../../helper/enum.js');
-
+const { getExistingRecord, updateRoute53Record } = require("../../helper/aws/route53.js");
 const readFileAsync = promisify(fs.readFile);
+async function readAndParseFile(file) {
+  const data = await readFileAsync(file, { encoding: 'utf-8' });
+  return JSON.parse(data);
+}
+
+const route53 = new AWS.Route53();
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -17,65 +23,6 @@ AWS.config.update({
   retryDelayOptions: { base: 200 }
 });
 
-const route53 = new AWS.Route53();
-
-async function readAndParseFile(file) {
-  const data = await readFileAsync(file, { encoding: 'utf-8' });
-  return JSON.parse(data);
-}
-
-//helper function to get the existing record
-async function getExistingRecord(hostedZoneId, recordName, recordType) {
-  try {
-    const records = await route53.listResourceRecordSets({ HostedZoneId: hostedZoneId }).promise();
-    const found = records.ResourceRecordSets.find(
-      r => r.Name.replace(/\.$/, '') === recordName && r.Type === recordType
-    );
-
-    if (!found) {
-      custom_logging(chalk.red(`Record ${recordName} (${recordType}) not found in hosted zone ${hostedZoneId}. Skipping...`));
-      return null;
-    }
-
-    return found;
-  } catch (err) {
-    custom_logging(chalk.red(`Error fetching record ${recordName}: ${err.message}`));
-    return null;
-  }
-}
-
-//updates route53 record
-async function updateRoute53Record(hostedZoneId, recordName, recordType, newValues, ttl) {
-  const params = {
-    HostedZoneId: hostedZoneId,
-    ChangeBatch: {
-      Changes: [
-        {
-          Action: 'UPSERT',
-          ResourceRecordSet: {
-            Name: recordName,
-            Type: recordType,
-            TTL: ttl,
-            ResourceRecords: newValues.map(value => ({ Value: value }))
-          }
-        }
-      ]
-    }
-  };
-
-  if (global.DRY_RUN) {
-    custom_logging(chalk.yellow(`[DRY RUN] Would update ${recordName} (${recordType}) → ${newValues.join(', ')}`));
-    return;
-  }
-
-  try {
-    const result = await route53.changeResourceRecordSets(params).promise();
-    custom_logging(chalk.green(`Updated ${recordName} (${recordType}) → ${newValues.join(', ')}`));
-    return result;
-  } catch (err) {
-    custom_logging(chalk.red(`Error updating ${recordName}: ${err.message}`));
-  }
-}
 
 //This function loops through each record of each hosted zone and calls updateroute53record for each
 async function processRoute53(config) {
@@ -93,14 +40,14 @@ async function processRoute53(config) {
               : record.failover;
 
         // Fetch the existing record to get TTL and validate existence
-        const existingRecord = await getExistingRecord(hostedZoneId, record.dns, record.type);
+        const existingRecord = await getExistingRecord(route53, hostedZoneId, record.dns, record.type);
 
         if (!existingRecord) {
           continue;
         }
 
         const ttl = existingRecord.TTL || 300;  //fallback to 300 if TTL doesnot exist
-        await updateRoute53Record(hostedZoneId, record.dns, record.type, targetValues, ttl);
+        await updateRoute53Record(route53, hostedZoneId, record.dns, record.type, targetValues, ttl);
         }
     } catch (err) {
       custom_logging(chalk.red(`Error processing hosted zone ${hostedZoneId}: ${err.message}`));

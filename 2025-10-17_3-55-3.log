@@ -1,0 +1,18 @@
+[2025-10-16T22:55:03.108Z] [31mDRY RUN is disabled[39m
+[2025-10-16T22:55:03.109Z] [33mProcessing all Route53 hosted zones[39m
+[2025-10-16T22:55:03.110Z] [32mStarting Route53 switching to FAILOVER[39m
+[2025-10-16T22:55:03.111Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
+[2025-10-16T22:55:04.393Z] [31mError fetching record cnamrecord.awais.one: The security token included in the request is invalid.[39m
+[2025-10-16T22:55:05.611Z] [31mError fetching record arecord.awais.one: The security token included in the request is invalid.[39m
+[2025-10-16T22:55:05.611Z] [34mProcessing hosted zone: Z0217815LKDJHRSXWM[39m
+[2025-10-16T22:55:06.839Z] [31mError fetching record cnamrecord.awais.one: The security token included in the request is invalid.[39m
+[2025-10-16T22:55:07.931Z] [31mError fetching record arecord.awais.one: The security token included in the request is invalid.[39m
+[2025-10-16T22:55:07.931Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
+[2025-10-16T22:55:09.194Z] [31mError fetching record cnamrsdasdecord.awais.one: The security token included in the request is invalid.[39m
+[2025-10-16T22:55:10.422Z] [31mError fetching record arecord.awais.one: The security token included in the request is invalid.[39m
+[2025-10-16T22:55:10.423Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
+[2025-10-16T22:55:11.549Z] [31mError fetching record cnamrsdasdecord.awais.one: The security token included in the request is invalid.[39m
+[2025-10-16T22:55:12.676Z] [31mError fetching record arecord.awais.one: The security token included in the request is invalid.[39m
+[2025-10-16T22:55:12.676Z] [32mRoute53 process completed.[39m
+[2025-10-16T22:55:12.676Z] [32mProcess completed.[39m
+[2025-10-16T22:55:12.676Z] [32mExiting...[39m

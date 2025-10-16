@@ -1,0 +1,3 @@
+[2025-10-16T22:52:32.384Z] [31mDRY RUN is disabled[39m
+[2025-10-16T22:52:32.385Z] [33mProcessing all Route53 hosted zones[39m
+[2025-10-16T22:52:32.385Z] [31mError: [39mThe "paths[4]" argument must be of type string. Received undefined
