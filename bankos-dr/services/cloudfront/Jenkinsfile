@@ -10,7 +10,7 @@ pipeline {
         //    registryCredentialsId 'nexus-creds'
         //    args '-v /var/run/docker.sock:/var/run/docker.sock'
         //}
-    }
+    //}
     environment {
         CONFIG_FILE = './cloudfront/configuration.json'
     }
