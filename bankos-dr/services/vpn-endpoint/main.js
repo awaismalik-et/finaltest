@@ -101,7 +101,7 @@ const mainFunction = async () => {
     }
 
     custom_logging(`Switing to ${chalk.green(envs.switching_to)} environment`)
-    await processVpnEndpoint(envs)
+    //await processVpnEndpoint(envs)
     custom_logging(chalk.green("Process has been completed"));
 };
 
