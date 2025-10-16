@@ -1,0 +1,5 @@
+[2025-10-16T18:31:45.032Z] [33mDRY RUN is enabled[39m
+[2025-10-16T18:31:45.032Z] [32mProcessing Route53 hosted zone at index: 2[39m
+[2025-10-16T18:31:45.034Z] [31mIndex 2 out of bounds (0..1)[39m
+[2025-10-16T18:31:45.034Z] [32mProcess completed.[39m
+[2025-10-16T18:31:45.034Z] [32mExiting...[39m

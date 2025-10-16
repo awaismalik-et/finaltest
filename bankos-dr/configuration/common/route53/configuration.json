@@ -1,0 +1,72 @@
+{
+    "routes": [
+        {
+            "hosted_zone_id": "Z02178151SMLKDJHRSXWM",
+            "records": [  
+                {
+                    "dns": "cnamrecord.awais.one",
+                    "type": "CNAME",
+                    "failover": ["failover.example.com"],
+                    "active": ["active.example.com"]
+                },
+                {
+                    "dns": "arecord.awais.one",
+                    "type": "A",
+                    "failover": ["192.168.1.1"],
+                    "active": ["192.168.1.2", "192.168.2.4"]
+                }
+            ]
+        },
+        {
+            "hosted_zone_id": "Z0217815LKDJHRSXWM",
+            "records": [  
+                {
+                    "dns": "cnamrecord.awais.one",
+                    "type": "CNAME",
+                    "failover": ["failover.example.com"],
+                    "active": ["active.example.com"]
+                },
+                {
+                    "dns": "arecord.awais.one",
+                    "type": "A",
+                    "failover": ["192.168.1.1"],
+                    "active": ["192.168.1.2", "192.168.2.4"]
+                }
+            ]
+        },
+        {
+            "hosted_zone_id": "Z02178151SMLKDJHRSXWM",
+            "records": [  
+                {
+                    "dns": "cnamrsdasdecord.awais.one",
+                    "type": "CNAME",
+                    "failover": ["failover.example.com"],
+                    "active": ["active.example.com"]
+                },
+                {
+                    "dns": "arecord.awais.one",
+                    "type": "A",
+                    "failover": ["192.168.1.1"],
+                    "active": ["192.168.1.2", "192.168.2.4"]
+                }
+            ]
+        },
+        {
+            "hosted_zone_id": "Z02178151SMLKDJHRSXWM",
+            "records": [  
+                {
+                    "dns": "cnamrsdasdecord.awais.one",
+                    "type": "CNAME",
+                    "failover": ["failover.example.com"],
+                    "active": ["active.example.com"]
+                },
+                {
+                    "dns": "arecord.awais.one",
+                    "type": "A",
+                    "failover": ["192.168.1.1", "192.168.10.4", "192.168.30.4"],
+                    "active": ["192.168.1.2", "192.168.2.4"]
+                }
+            ]
+        }
+    ]
+}

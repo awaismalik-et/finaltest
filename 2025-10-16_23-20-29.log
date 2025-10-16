@@ -1,0 +1,11 @@
+[2025-10-16T18:20:30.027Z] [33mDRY RUN is enabled[39m
+[2025-10-16T18:20:30.028Z] [33mProcessing all Route53 hosted zones[39m
+[2025-10-16T18:20:30.029Z] [32mStarting Route53 switching to undefined[39m
+[2025-10-16T18:20:30.029Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
+[2025-10-16T18:20:30.030Z] Updating record cnamrecord.awais.one (CNAME) → failover.example.com
+[2025-10-16T18:20:30.030Z] [33m[DRY RUN] Would update cnamrecord.awais.one (CNAME) → failover.example.com[39m
+[2025-10-16T18:20:30.030Z] Updating record arecord.awais.one (A) → 192.168.1.1
+[2025-10-16T18:20:30.030Z] [33m[DRY RUN] Would update arecord.awais.one (A) → 192.168.1.1[39m
+[2025-10-16T18:20:30.030Z] [32mRoute53 process completed.[39m
+[2025-10-16T18:20:30.030Z] [32mProcess completed.[39m
+[2025-10-16T18:20:30.030Z] [32mExiting...[39m

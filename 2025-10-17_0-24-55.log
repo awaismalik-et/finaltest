@@ -1,0 +1,11 @@
+[2025-10-16T19:24:55.347Z] [31mDRY RUN is disabled[39m
+[2025-10-16T19:24:55.348Z] [33mProcessing all Route53 hosted zones[39m
+[2025-10-16T19:24:55.350Z] [32mStarting Route53 switching to ACTIVE[39m
+[2025-10-16T19:24:55.350Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
+[2025-10-16T19:24:55.350Z] Updating record cnamrecord.awais.one (CNAME) → active.example.com
+[2025-10-16T19:24:58.201Z] [32mUpdated cnamrecord.awais.one (CNAME) → active.example.com[39m
+[2025-10-16T19:24:58.201Z] Updating record arecord.awais.one (A) → 192.168.1.2, 192.168.2.4
+[2025-10-16T19:25:01.183Z] [32mUpdated arecord.awais.one (A) → 192.168.1.2, 192.168.2.4[39m
+[2025-10-16T19:25:01.184Z] [34mProcessing hosted zone: Z02178151SKDJHRSXWM[39m
+[2025-10-16T19:25:01.184Z] Updating record cnamrecord.awais.one (CNAME) → active.example.com
+[2025-10-16T19:25:02.413Z] [31mError: [39mNo hosted zone found with ID: Z02178151SKDJHRSXWM

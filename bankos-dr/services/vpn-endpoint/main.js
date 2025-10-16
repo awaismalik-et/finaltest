@@ -64,7 +64,7 @@ const mainFunction = async () => {
     .version('0.0.1')
     .option('-dr --dryRun', "Dry run the process")
     .option('-pce --processCurrentEnvironment', "Whether to perform the process on current environment")
-
+    .option('--vpnendpoint-index <index>', 'Index of vpn-endpoint resource to process')
     .parse(process.argv);
     global.SLEEP_TIME = 1000;
     
@@ -87,6 +87,18 @@ const mainFunction = async () => {
     }
     else
         custom_logging(chalk.yellow("Current environment will not be processed"))
+
+    if (options.vpnendpointIndex !== undefined) {
+      custom_logging(chalk.green(`Processing vpn-endpoint resource at index: ${options.vpnendpointIndex}`));
+      const idx = parseInt(options.vpnendpointIndex);
+      if (idx < 0 || idx >= envs.vpn_endpoints.length) {
+          custom_logging(chalk.red(`Index ${idx} out of bounds (0..${envs.vpn_endpoints.length - 1})`));
+          return;
+      }
+      envs.vpn_endpoints = [ envs.vpn_endpoints[idx] ];
+    } else {
+        custom_logging(chalk.yellow("Processing all vpn-endpoint resources"));
+    }
 
     custom_logging(`Switing to ${chalk.green(envs.switching_to)} environment`)
     await processVpnEndpoint(envs)

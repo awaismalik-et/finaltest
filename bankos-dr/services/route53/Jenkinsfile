@@ -1,16 +1,20 @@
-@Library('client-shared-config') _
-
 pipeline {
-    agent any
+    agent {
+            docker {
+                label 'bankos'
+                image 'build-agent:1.0.2-jdk17'
+                registryUrl 'https://docker.finzly.net'
+                registryCredentialsId 'nexus-creds'
+                args '-v /var/run/docker.sock:/var/run/docker.sock'
+            }
+        }
     environment {
-        CONFIG_FILE = './transfer-family/configuration.json'
+        CONFIG_FILE = 'bankos-dr/configuration/common/route53/configuration.json'
     }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        choice(name: 'CLIENT_NAME', choices: (['None', 'All'] + clientConfig.getAllClients()).join('\n'), description: 'Select the CLIENT_NAME')
-        
-        string(name: 'CLIENTS_BATCH_SIZE', defaultValue: '1', description: 'Number of clients to process in parallel')
-        string(name: 'RESOURCES_BATCH_SIZE', defaultValue: '1', description: 'Number of RDS resources to process in parallel')
+
+        string(name: 'RESOURCES_BATCH_SIZE', defaultValue: '1', description: 'Number of resources to process in parallel')
 
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
@@ -19,9 +23,8 @@ pipeline {
         booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Check this to run the pipeline in dry run mode')
         booleanParam(name: 'PROCESS_COMMON_CONFIG', defaultValue: false, description: 'Process common configuration')
     }
-
     stages {
-        stage('Install Node.js Packages') {
+        stage('Install Node.js and Packages') {
             steps {
                 sh '''
                 cd bankos-dr
@@ -29,33 +32,22 @@ pipeline {
                 '''
             }
         }
-
-        stage('Determine Clients to Process') {
+        stage('Load and Process Configuration') {
             steps {
                 script {
                     env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
                     env.AWS_SECRET_ACCESS_KEY = params.AWS_SECRET_ACCESS_KEY
                     env.AWS_SESSION_TOKEN = params.AWS_SESSION_TOKEN
                     env.SWITCHING_TO = params.SWITCHING_TO
-                    
-                    def clientsToProcess = []
-                    if (params.CLIENT_NAME == 'All') {
-                        clientsToProcess = clientConfig.getAllClients()
-                    } 
-                    else if (params.CLIENT_NAME == 'None') {
-                        echo 'Skipping: No client selected'
-                    }
-                    else {
-                        clientsToProcess = [params.CLIENT_NAME]
-                    }
 
+                    def clientsToProcess = []
                     if (params.PROCESS_COMMON_CONFIG) {
                         clientsToProcess.add('common')
+                        env.CLIENTS_BATCH_SIZE = '1'
                     }
-                    clientsToProcess = clientsToProcess.unique()
-                    
+
                     if (clientsToProcess.isEmpty()) {
-                        echo "No clients selected. Please select a CLIENT_NAME or enable PROCESS_COMMON_CONFIG."
+                        echo "No clients selected. Please select a CLIENT."
                         env.SKIP_PROCESSING = 'true'
                         return
                     }
@@ -73,11 +65,10 @@ pipeline {
             steps {
                 script {
                     def clientsList = env.CLIENTS_TO_PROCESS.split(',')
-                    def clientsBatchSize = params.CLIENTS_BATCH_SIZE.toInteger()
+                    def clientsBatchSize = env.CLIENTS_BATCH_SIZE.toInteger()
                     def resourcesBatchSize = params.RESOURCES_BATCH_SIZE.toInteger()
                     def clientBatchCount = (clientsList.size() + clientsBatchSize - 1).intdiv(clientsBatchSize)
-                    echo "Processing ${clientsList.size()} clients in ${clientBatchCount} batches of ${clientsBatchSize}"
-
+                    //echo "Processing ${clientsList.size()} clients in ${clientBatchCount} batches of ${clientsBatchSize}"
                     for (int clientBatchIndex = 0; clientBatchIndex < clientBatchCount; clientBatchIndex++) {
                         def startClientIndex = clientBatchIndex * clientsBatchSize
                         def endClientIndex = Math.min((clientBatchIndex + 1) * clientsBatchSize, clientsList.size())
@@ -85,16 +76,16 @@ pipeline {
                         for (int i = startClientIndex; i < endClientIndex; i++) {
                             clientBatch.add(clientsList[i])
                         }
-                        echo "Processing client batch ${clientBatchIndex + 1}/${clientBatchCount} (clients ${startClientIndex}-${endClientIndex-1})"
+                        //echo "Processing client batch ${clientBatchIndex + 1}/${clientBatchCount} (clients ${startClientIndex}-${endClientIndex-1})"
                         def parallelClientStages = [:]
                         for (def client in clientBatch) {
                             def currentClient = client
                             parallelClientStages["Client: ${ currentClient }"] = {
                                 stage("Process Client: ${ currentClient } (Batch ${clientBatchIndex + 1}/${clientBatchCount}) ") {
-                                    def resourceCount = sh(script: "node bankos-dr/helper/utils/get_configuration_resources_count.js ${currentClient} transfer-family", returnStdout: true).trim().toInteger()
+                                    def resourceCount = sh(script: "node bankos-dr/helper/utils/get_configuration_resources_count.js ${currentClient} route53", returnStdout: true).trim().toInteger()
                                     if (resourceCount > 0) {
-                                        echo "Found ${resourceCount} transfer-family resoures for client ${currentClient}"
-                                        
+                                        echo "Found ${resourceCount} route53 resources for client ${currentClient}"
+
                                         def batchCount = (resourceCount + resourcesBatchSize - 1).intdiv(resourcesBatchSize)
                                         for (int batchIndex = 0; batchIndex < batchCount; batchIndex++) {
                                             def startIndex = batchIndex * resourcesBatchSize
@@ -103,17 +94,17 @@ pipeline {
                                             def parallelSteps = [:]
                                             for (int i = startIndex; i <= endIndex; i++) {
                                                 def resourceIndex = i
-                                                parallelSteps["Transfer-family Resource ${ resourceIndex + 1 }"] = {
+                                                parallelSteps["S3 resource ${ resourceIndex + 1 }"] = {
 
-                                                    def command = "node bankos-dr/services/transfer-family/main.js"
+                                                    def command = "node bankos-dr/services/s3/main.js"
                                                     withEnv([
                                                         "CLIENT_NAME=${currentClient}",
                                                     ]) {
                                                         if (params.DRY_RUN) {
                                                             command += ' -dr'
                                                         }
-                                                        command += " --transferfamily-index=${resourceIndex}"
-                                                        echo "Processing transfer-family resource index ${resourceIndex} for client: ${currentClient}"
+                                                        command += " --route53-index=${resourceIndex}"
+                                                        echo "Processing route53 resource index ${resourceIndex} for client: ${currentClient}"
                                                         sh command
                                                     }
                                                 }
@@ -121,7 +112,7 @@ pipeline {
                                             parallel parallelSteps
                                         }
                                     } else {
-                                        echo "No transfer-family resources found for client ${currentClient}"
+                                        echo "No route53 resources found for client ${currentClient}"
                                     }
                                 }
                             }

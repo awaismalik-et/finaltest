@@ -96,7 +96,7 @@ const find_and_update_cloudfront_origin = function(behaviour, arr, key, val, swi
     return origin;
 };
 
-const processFiles = async(file) => {
+const processFiles = async(file, options) => {
     if (!fs.existsSync(file)) {
         custom_logging(chalk.red(`Configuration file not found: ${file}, skipping...`));
         return;
@@ -106,6 +106,17 @@ const processFiles = async(file) => {
     file_config['switching_to'] = process.env.SWITCHING_TO;
     file_config['CLIENT_NAME'] = process.env.CLIENT_NAME;
 
+    //this block checks the index and sets the cloudfront array in the file_config to point to that index
+    if (options.cloudfrontIndex !== undefined) {
+        const idx = parseInt(options.cloudfrontIndex);
+        if (idx < 0 || idx >= file_config.cloudfront.length) {
+            custom_logging(chalk.red(`Index ${idx} out of bounds (0..${file_config.cloudfront.length - 1})`));
+            return;
+        }
+        //after this the file_config only contains the required index cloudfront resource.
+        file_config.cloudfront = [ file_config.cloudfront[idx] ];
+    }
+
     custom_logging(`Switching to ${chalk.green(file_config.switching_to)} environment`);
     await processCloudFront(file_config);
 }
@@ -114,7 +125,7 @@ const mainFunction = async () => {
     program
     .version('0.0.1')
     .option('-dr --dryRun', "Dry run the process")
-    
+    .option('--cloudfront-index <index>', 'Index of cloudfront resource to process')
     .parse(process.argv);
 
     global.SLEEP_TIME = 1000;
@@ -128,8 +139,14 @@ const mainFunction = async () => {
         custom_logging(chalk.red("DRY RUN is disabled"));
     }
 
+    if (options.cloudfrontIndex !== undefined) {
+        custom_logging(chalk.green(`Processing cloudFront resource at index: ${options.cloudfrontIndex}`));
+    } else {
+        custom_logging(chalk.yellow("Processing all cloudfront resources"));
+    }
+
     let clientFile = path.resolve(__dirname, '..', '..', 'configuration', process.env.CLIENT_NAME, 'cloudfront', 'configuration.json');
-    await processFiles(clientFile);
+    await processFiles(clientFile, options);
     
     custom_logging(chalk.green("Process has been completed"));
 }    

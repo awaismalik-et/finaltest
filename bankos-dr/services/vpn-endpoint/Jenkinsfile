@@ -14,6 +14,10 @@ pipeline {
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
         choice(name: 'CLIENT_NAME', choices: (['None', 'All'] + clientConfig.getAllClients()).join('\n'), description: 'Select the CLIENT_NAME')
+
+        string(name: 'CLIENTS_BATCH_SIZE', defaultValue: '1', description: 'Number of clients to process in parallel')
+        string(name: 'RESOURCES_BATCH_SIZE', defaultValue: '1', description: 'Number of RDS resources to process in parallel')
+
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
@@ -33,7 +37,7 @@ pipeline {
             }
         }
 
-        stage('Load and Process Configuration') {
+        stage('Determine Clients to Process') {
             steps {
                 script {
                     env.AWS_ACCESS_KEY_ID = params.AWS_ACCESS_KEY_ID
@@ -60,23 +64,92 @@ pipeline {
                     if (params.PROCESS_COMMON_CONFIG) {
                         clientsToProcess.add('common')
                     }
+                    clientsToProcess = clientsToProcess.unique()
+                    
+                    if (clientsToProcess.isEmpty()) {
+                        echo "No clients selected. Please select a CLIENT_NAME or enable PROCESS_COMMON_CONFIG."
+                        env.SKIP_PROCESSING = 'true'
+                        return
+                    }
+                    env.CLIENTS_TO_PROCESS = clientsToProcess.join(',')
+                    echo "Clients to process: ${env.CLIENTS_TO_PROCESS}"
+                    env.SKIP_PROCESSING = 'false'
+                }
+            }
+        }
 
-                    for (client in clientsToProcess) {
-                        def command = "node bankos-dr/services/vpn-endpoint/main.js"
-                        env.CLIENT_NAME = client
+        stage('Process Clients in Batches') {
+            when {
+                expression { return env.SKIP_PROCESSING != 'true' }
+            }
+            steps {
+                script {
+                    def clientsList = env.CLIENTS_TO_PROCESS.split(',')
+                    def clientsBatchSize = params.CLIENTS_BATCH_SIZE.toInteger()
+                    def resourcesBatchSize = params.RESOURCES_BATCH_SIZE.toInteger()
+                    def clientBatchCount = (clientsList.size() + clientsBatchSize - 1).intdiv(clientsBatchSize)
+                    echo "Processing ${clientsList.size()} clients in ${clientBatchCount} batches of ${clientsBatchSize}"
 
-                        if (params.DRY_RUN) {
-                            command += ' -dr'
+                    for (int clientBatchIndex = 0; clientBatchIndex < clientBatchCount; clientBatchIndex++) {
+                        def startClientIndex = clientBatchIndex * clientsBatchSize
+                        def endClientIndex = Math.min((clientBatchIndex + 1) * clientsBatchSize, clientsList.size())
+                        def clientBatch = []
+                        for (int i = startClientIndex; i < endClientIndex; i++) {
+                            clientBatch.add(clientsList[i])
                         }
-                        if (params.PROCESS_CURRENT_ENV) {
-                            command += ' -pce'
-                        }
+                        echo "Processing client batch ${clientBatchIndex + 1}/${clientBatchCount} (clients ${startClientIndex}-${endClientIndex-1})"
+                        def parallelClientStages = [:]
+                        for (def client in clientBatch) {
+                            def currentClient = client
+                            parallelClientStages["Client: ${ currentClient }"] = {
+                                stage("Process Client: ${ currentClient } (Batch ${clientBatchIndex + 1}/${clientBatchCount}) ") {
+                                    def resourceCount = sh(script: "node bankos-dr/helper/utils/get_configuration_resources_count.js ${currentClient} vpn_endpoint", returnStdout: true).trim().toInteger()
+                                    if (resourceCount > 0) {
+                                        echo "Found ${resourceCount} vpn-Enpoint resources for client ${currentClient}"
+                                        
+                                        def batchCount = (resourceCount + resourcesBatchSize - 1).intdiv(resourcesBatchSize)
+                                        for (int batchIndex = 0; batchIndex < batchCount; batchIndex++) {
+                                            def startIndex = batchIndex * resourcesBatchSize
+                                            def endIndex = Math.min((batchIndex + 1) * resourcesBatchSize - 1, resourceCount - 1)
+                                            echo "Processing batch ${batchIndex + 1}/${batchCount} (resources ${startIndex+1}-${endIndex+1}) for client ${currentClient}"
+                                            def parallelSteps = [:]
+                                            for (int i = startIndex; i <= endIndex; i++) {
+                                                def resourceIndex = i
+                                                parallelSteps["Vpn-endpoint ${ resourceIndex + 1 }"] = {
 
-                        echo "Running for client: ${client}"
-                        sh command
+                                                    def command = "node bankos-dr/services/vpn-endpoint/main.js"
+                                                    withEnv([
+                                                        "CLIENT_NAME=${currentClient}",
+                                                    ]) {
+                                                        if (params.DRY_RUN) {
+                                                            command += ' -dr'
+                                                        }
+                                                        if (params.PROCESS_CURRENT_ENV) {
+                                                            command += ' -pce'
+                                                        }
+                                                        command += " --vpnendpoint-index=${resourceIndex}"
+                                                        echo "Processing vpn-endpoint resource index ${resourceIndex} for client: ${currentClient}"
+                                                        sh command
+                                                    }
+                                                }
+                                            }
+                                            parallel parallelSteps
+                                        }
+                                    } else {
+                                        echo "No vpn-endpoint resources found for client ${currentClient}"
+                                    }
+                                }
+                            }
+                        }
+                        parallel parallelClientStages
                     }
                 }
             }
+        }
+    }
+    post {
+        always {
+            cleanWs()  // Clean up workspace after the pipeline execution
         }
     }
 }

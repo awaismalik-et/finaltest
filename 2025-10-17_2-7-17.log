@@ -1,0 +1,15 @@
+[2025-10-16T21:07:17.308Z] [31mDRY RUN is disabled[39m
+[2025-10-16T21:07:17.309Z] [33mProcessing all Route53 hosted zones[39m
+[2025-10-16T21:07:17.311Z] [32mStarting Route53 switching to ACTIVE[39m
+[2025-10-16T21:07:17.311Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
+[2025-10-16T21:07:19.847Z] [32mUpdated cnamrecord.awais.one (CNAME) → active.example.com[39m
+[2025-10-16T21:07:22.248Z] [32mUpdated arecord.awais.one (A) → 192.168.1.2, 192.168.2.4[39m
+[2025-10-16T21:07:22.249Z] [34mProcessing hosted zone: Z0217815LKDJHRSXWM[39m
+[2025-10-16T21:07:23.319Z] [31mError fetching record cnamrecord.awais.one: No hosted zone found with ID: Z0217815LKDJHRSXWM[39m
+[2025-10-16T21:07:24.502Z] [31mError fetching record arecord.awais.one: No hosted zone found with ID: Z0217815LKDJHRSXWM[39m
+[2025-10-16T21:07:24.502Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
+[2025-10-16T21:07:25.570Z] [31mRecord cnamrsdasdecord.awais.one (CNAME) not found in hosted zone Z02178151SMLKDJHRSXWM. Skipping...[39m
+[2025-10-16T21:07:28.189Z] [32mUpdated arecord.awais.one (A) → 192.168.1.2, 192.168.2.4[39m
+[2025-10-16T21:07:28.189Z] [32mRoute53 process completed.[39m
+[2025-10-16T21:07:28.189Z] [32mProcess completed.[39m
+[2025-10-16T21:07:28.189Z] [32mExiting...[39m

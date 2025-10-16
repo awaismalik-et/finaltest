@@ -409,6 +409,7 @@ const mainFunction = async () => {
   program
     .version('0.0.1')
     .option('-dr --dryRun', "Dry run the process")
+    .option('--transferfamily-index <index>', 'Index of transfer family resource to process')
     .parse(process.argv);
 
   const options = program.opts();
@@ -432,6 +433,18 @@ const mainFunction = async () => {
     custom_logging(chalk.red("DRY RUN is disabled"));
   }
 
+  if (options.transferfamilyIndex !== undefined) {
+    custom_logging(chalk.green(`Processing transfer-family resource at index: ${options.transferfamilyIndex}`));
+    const idx = parseInt(options.transferfamilyIndex);
+    if (idx < 0 || idx >= config.servers.length) {
+      custom_logging(chalk.red(`Index ${idx} out of bounds (0..${config.servers.length - 1})`));
+      return;
+    }
+    config.servers = [  config.servers[idx] ];
+  } else {
+    custom_logging(chalk.yellow("Processing all transfer-family resources"));
+  }
+  
   custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
 
   await processTransferUserReplication(config);

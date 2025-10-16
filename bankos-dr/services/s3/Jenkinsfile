@@ -13,6 +13,9 @@ pipeline {
     }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
+
+        string(name: 'RESOURCES_BATCH_SIZE', defaultValue: '1', description: 'Number of resources to process in parallel')
+
         password(name: 'AWS_ACCESS_KEY_ID', defaultValue: '', description: 'AWS_ACCESS_KEY_ID')
         password(name: 'AWS_SECRET_ACCESS_KEY', defaultValue: '', description: 'AWS_SECRET_ACCESS_KEY')
         password(name: 'AWS_SESSION_TOKEN', defaultValue: '', description: 'AWS_SESSION_TOKEN')
@@ -44,28 +47,92 @@ pipeline {
                     def clientsToProcess = []
                     if (params.PROCESS_COMMON_CONFIG) {
                         clientsToProcess.add('common')
+                        env.CLIENTS_BATCH_SIZE = '1'
                     }
 
-                    if (clientsToProcess.size() > 0) {
-                        for (client in clientsToProcess) {
-                            def command = "node bankos-dr/services/s3/main.js"
-                            env.CLIENT_NAME = client
+                    if (clientsToProcess.isEmpty()) {
+                        echo "No clients selected. Please select a CLIENT."
+                        env.SKIP_PROCESSING = 'true'
+                        return
+                    }
+                    env.CLIENTS_TO_PROCESS = clientsToProcess.join(',')
+                    echo "Clients to process: ${env.CLIENTS_TO_PROCESS}"
+                    env.SKIP_PROCESSING = 'false'
+                }
+            }
+        }
 
-                            if (params.DRY_RUN) {
-                                command += ' -dr'
-                            }
-                            if (params.PROCESS_CURRENT_ENV) {
-                                command += ' -pce'
-                            }
-
-                            echo "Running for client: ${client}"
-                            sh command
+        stage('Process Clients in Batches') {
+            when {
+                expression { return env.SKIP_PROCESSING != 'true' }
+            }
+            steps {
+                script {
+                    def clientsList = env.CLIENTS_TO_PROCESS.split(',')
+                    def clientsBatchSize = env.CLIENTS_BATCH_SIZE.toInteger()
+                    def resourcesBatchSize = params.RESOURCES_BATCH_SIZE.toInteger()
+                    def clientBatchCount = (clientsList.size() + clientsBatchSize - 1).intdiv(clientsBatchSize)
+                    //echo "Processing ${clientsList.size()} clients in ${clientBatchCount} batches of ${clientsBatchSize}"
+                    for (int clientBatchIndex = 0; clientBatchIndex < clientBatchCount; clientBatchIndex++) {
+                        def startClientIndex = clientBatchIndex * clientsBatchSize
+                        def endClientIndex = Math.min((clientBatchIndex + 1) * clientsBatchSize, clientsList.size())
+                        def clientBatch = []
+                        for (int i = startClientIndex; i < endClientIndex; i++) {
+                            clientBatch.add(clientsList[i])
                         }
-                    } else {
-                        echo "No clients to process. Skipping node script execution."
+                        //echo "Processing client batch ${clientBatchIndex + 1}/${clientBatchCount} (clients ${startClientIndex}-${endClientIndex-1})"
+                        def parallelClientStages = [:]
+                        for (def client in clientBatch) {
+                            def currentClient = client
+                            parallelClientStages["Client: ${ currentClient }"] = {
+                                stage("Process Client: ${ currentClient } (Batch ${clientBatchIndex + 1}/${clientBatchCount}) ") {
+                                    def resourceCount = sh(script: "node bankos-dr/helper/utils/get_configuration_resources_count.js ${currentClient} s3", returnStdout: true).trim().toInteger()
+                                    if (resourceCount > 0) {
+                                        echo "Found ${resourceCount} s3 resources for client ${currentClient}"
+
+                                        def batchCount = (resourceCount + resourcesBatchSize - 1).intdiv(resourcesBatchSize)
+                                        for (int batchIndex = 0; batchIndex < batchCount; batchIndex++) {
+                                            def startIndex = batchIndex * resourcesBatchSize
+                                            def endIndex = Math.min((batchIndex + 1) * resourcesBatchSize - 1, resourceCount - 1)
+                                            echo "Processing batch ${batchIndex + 1}/${batchCount} (resources ${startIndex+1}-${endIndex+1}) for client ${currentClient}"
+                                            def parallelSteps = [:]
+                                            for (int i = startIndex; i <= endIndex; i++) {
+                                                def resourceIndex = i
+                                                parallelSteps["S3 resource ${ resourceIndex + 1 }"] = {
+
+                                                    def command = "node bankos-dr/services/s3/main.js"
+                                                    withEnv([
+                                                        "CLIENT_NAME=${currentClient}",
+                                                    ]) {
+                                                        if (params.DRY_RUN) {
+                                                            command += ' -dr'
+                                                        }
+                                                        if (params.PROCESS_CURRENT_ENV) {
+                                                            command += ' -pce'
+                                                        }
+                                                        command += " --s3-index=${resourceIndex}"
+                                                        echo "Processing s3 resource index ${resourceIndex} for client: ${currentClient}"
+                                                        sh command
+                                                    }
+                                                }
+                                            }
+                                            parallel parallelSteps
+                                        }
+                                    } else {
+                                        echo "No s3 resources found for client ${currentClient}"
+                                    }
+                                }
+                            }
+                        }
+                        parallel parallelClientStages
                     }
                 }
             }
+        }
+    }
+    post {
+        always {
+            cleanWs()  // Clean up workspace after the pipeline execution
         }
     }
 }

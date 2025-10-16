@@ -77,6 +77,7 @@ const mainFunction = async () => {
   program
     .version('1.0.0')
     .option('-dr, --dryRun', "Dry run the process")
+    .option('--s3sync-index <index>', 'Process only this S3sync bucket index')
     .parse(process.argv);
 
   global.SLEEP_TIME = 1000;
@@ -95,6 +96,19 @@ const mainFunction = async () => {
     config['switching_to'] = process.env.SWITCHING_TO;
     
     custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
+
+    if (options.s3syncIndex !== undefined) {
+      custom_logging(chalk.green(`Processing s3-sync resource at index: ${options.s3syncIndex}`));
+      const idx = parseInt(options.s3syncIndex);
+      if (idx >= 0 && idx < config.buckets.length) {
+        config.buckets = [ config.buckets[idx] ]
+      } else {
+        custom_logging(chalk.red(`Index ${idx} out of bounds (0..${config.buckets.length - 1})`));
+        return;
+      }
+    } else {
+      custom_logging(chalk.yellow("Processing all s3-sync resources"));
+    }
 
     try {
       const checkAwsCli = spawn('which', ['aws']);

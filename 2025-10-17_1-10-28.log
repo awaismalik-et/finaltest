@@ -1,0 +1,21 @@
+[2025-10-16T20:10:28.181Z] [31mDRY RUN is disabled[39m
+[2025-10-16T20:10:28.182Z] [33mProcessing all Route53 hosted zones[39m
+[2025-10-16T20:10:28.183Z] [32mStarting Route53 switching to ACTIVE[39m
+[2025-10-16T20:10:28.183Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
+[2025-10-16T20:10:28.183Z] Updating record cnamrecord.awais.one (CNAME) → active.example.com
+[2025-10-16T20:10:30.720Z] [32mUpdated cnamrecord.awais.one (CNAME) → active.example.com[39m
+[2025-10-16T20:10:30.721Z] Updating record arecord.awais.one (A) → 192.168.1.2, 192.168.2.4
+[2025-10-16T20:10:32.987Z] [32mUpdated arecord.awais.one (A) → 192.168.1.2, 192.168.2.4[39m
+[2025-10-16T20:10:32.987Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
+[2025-10-16T20:10:32.987Z] Updating record cnamrecord.awais.one (CNAME) → active.example.com
+[2025-10-16T20:10:35.429Z] [32mUpdated cnamrecord.awais.one (CNAME) → active.example.com[39m
+[2025-10-16T20:10:35.429Z] Updating record arecord.awais.one (A) → 192.168.1.2, 192.168.2.4
+[2025-10-16T20:10:37.785Z] [32mUpdated arecord.awais.one (A) → 192.168.1.2, 192.168.2.4[39m
+[2025-10-16T20:10:37.785Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
+[2025-10-16T20:10:37.785Z] Updating record cnamord.awais.one (CNAME) → active.example.com
+[2025-10-16T20:10:40.241Z] [32mUpdated cnamord.awais.one (CNAME) → active.example.com[39m
+[2025-10-16T20:10:40.241Z] Updating record arecord.awais.one (A) → 192.168.1.2, 192.168.2.4
+[2025-10-16T20:10:42.698Z] [32mUpdated arecord.awais.one (A) → 192.168.1.2, 192.168.2.4[39m
+[2025-10-16T20:10:42.699Z] [32mRoute53 process completed.[39m
+[2025-10-16T20:10:42.699Z] [32mProcess completed.[39m
+[2025-10-16T20:10:42.699Z] [32mExiting...[39m

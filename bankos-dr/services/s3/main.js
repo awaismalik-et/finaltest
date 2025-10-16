@@ -109,6 +109,7 @@ const mainFunction = async () => {
     .version('1.0.0')
     .option('-dr, --dryRun', "Dry run the process")
     .option('-pce, --processCurrentEnvironment', "Process current environment")
+    .option('--s3-index <index>', 'Index of s3 resource to process')
     .parse(process.argv);
 
   global.SLEEP_TIME = 1000;
@@ -126,6 +127,19 @@ const mainFunction = async () => {
     let config = await readAndParseFile(configFile);
     config['switching_to'] = process.env.SWITCHING_TO;
     const processCurrentEnv = process.env.PROCESS_CURRENT_ENV === 'true' || options.processCurrentEnvironment;
+
+    if (options.s3Index !== undefined) {
+      custom_logging(chalk.green(`Processing s3 resource at index: ${options.s3Index}`));
+      const idx = parseInt(options.s3Index);
+      if (idx >= 0 && idx < config.triggers.length) {
+        config.triggers = [ config.triggers[idx] ]
+      } else {
+        custom_logging(chalk.red(`Index ${idx} out of bounds (0..${config.triggers.length - 1})`));
+        return;
+      }
+    } else {
+      custom_logging(chalk.yellow("Processing all s3 resources"));
+    }
     
     custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
 
