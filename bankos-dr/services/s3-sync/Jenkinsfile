@@ -44,11 +44,11 @@ pipeline {
                     def activeFilteredArray = []
                     def failoverFilteredArray = []
 
-                    def clientsToProcess = []
-                    if (params.PROCESS_COMMON_CONFIG) {
-                        clientsToProcess.add('common')
-                        env.CLIENTS_BATCH_SIZE = '1'
-                    }
+                    def clientsToProcess = ['common']
+                    //if (params.PROCESS_COMMON_CONFIG) {
+                    //    clientsToProcess.add('common')
+                    //    env.CLIENTS_BATCH_SIZE = '1'
+                    //}
 
                     if (clientsToProcess.isEmpty()) {
                         echo "No clients selected. Please select a CLIENT."
