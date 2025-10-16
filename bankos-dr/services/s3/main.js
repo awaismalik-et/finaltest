@@ -143,7 +143,7 @@ const mainFunction = async () => {
     
     custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
 
-    await copyS3EventNotifications(config, processCurrentEnv);
+    //await copyS3EventNotifications(config, processCurrentEnv);
     custom_logging(chalk.green("Process completed successfully"));
   } catch (error) {
     custom_logging(chalk.red(`Error in main function: ${error.message}`));
