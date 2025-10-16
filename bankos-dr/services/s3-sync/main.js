@@ -110,39 +110,39 @@ const mainFunction = async () => {
       custom_logging(chalk.yellow("Processing all s3-sync resources"));
     }
 
-    try {
-      const checkAwsCli = spawn('which', ['aws']);
-      let found = false;
-      
-      checkAwsCli.stdout.on('data', (data) => {
-        custom_logging(chalk.green(`AWS CLI found at: ${data.toString().trim()}`));
-        found = true;
-      });
-      
-      await new Promise((resolve) => {
-        checkAwsCli.on('close', (code) => {
-          if (code !== 0 || !found) {
-            custom_logging(chalk.red("AWS CLI not found! Please install AWS CLI before running this script."));
-            process.exit(1);
-          }
-          resolve();
-        });
-      });
-      
-      const versionProcess = spawn('aws', ['--version']);
-      versionProcess.stdout.on('data', (data) => {
-        custom_logging(chalk.green(`Using AWS CLI: ${data.toString().trim()}`));
-      });
-      
-      await new Promise((resolve) => {
-        versionProcess.on('close', resolve);
-      });
-    } catch (error) {
-      custom_logging(chalk.red(`Error checking AWS CLI: ${error.message}`));
-      process.exit(1);
-    }
+    //try {
+    //  const checkAwsCli = spawn('which', ['aws']);
+    //  let found = false;
+    //  
+    //  checkAwsCli.stdout.on('data', (data) => {
+    //    custom_logging(chalk.green(`AWS CLI found at: ${data.toString().trim()}`));
+    //    found = true;
+    //  });
+    //  
+    //  await new Promise((resolve) => {
+    //    checkAwsCli.on('close', (code) => {
+    //      if (code !== 0 || !found) {
+    //        custom_logging(chalk.red("AWS CLI not found! Please install AWS CLI before running this script."));
+    //        process.exit(1);
+    //      }
+    //      resolve();
+    //    });
+    //  });
+    //  
+    //  const versionProcess = spawn('aws', ['--version']);
+    //  versionProcess.stdout.on('data', (data) => {
+    //    custom_logging(chalk.green(`Using AWS CLI: ${data.toString().trim()}`));
+    //  });
+    //  
+    //  await new Promise((resolve) => {
+    //    versionProcess.on('close', resolve);
+    //  });
+    //} catch (error) {
+    //  custom_logging(chalk.red(`Error checking AWS CLI: ${error.message}`));
+    //  process.exit(1);
+    //}
 
-    await syncS3BucketContents(config);
+    //await syncS3BucketContents(config);
     custom_logging(chalk.green("Process completed successfully"));
   } catch (error) {
     custom_logging(chalk.red(`Error in main function: ${error.message}`));
