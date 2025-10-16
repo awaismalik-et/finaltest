@@ -1,9 +1,0 @@
-[2025-10-16T18:29:03.947Z] [33mDRY RUN is enabled[39m
-[2025-10-16T18:29:03.948Z] [33mProcessing all Route53 hosted zones[39m
-[2025-10-16T18:29:03.949Z] [32mStarting Route53 switching to FAILOVER[39m
-[2025-10-16T18:29:03.949Z] [34mProcessing hosted zone: Z02178151SMLKDJHRSXWM[39m
-[2025-10-16T18:29:03.950Z] [33m[DRY RUN] Would update cnamrecord.awais.one (CNAME) → failover.example.com[39m
-[2025-10-16T18:29:03.950Z] [33m[DRY RUN] Would update arecord.awais.one (A) → 192.168.1.1[39m
-[2025-10-16T18:29:03.950Z] [32mRoute53 process completed.[39m
-[2025-10-16T18:29:03.950Z] [32mProcess completed.[39m
-[2025-10-16T18:29:03.950Z] [32mExiting...[39m
