@@ -45,6 +45,7 @@ pipeline {
                     def failoverFilteredArray = []
 
                     def clientsToProcess = ['common']
+                    env.CLIENTS_BATCH_SIZE = '1'
                     //if (params.PROCESS_COMMON_CONFIG) {
                     //    clientsToProcess.add('common')
                     //    env.CLIENTS_BATCH_SIZE = '1'
