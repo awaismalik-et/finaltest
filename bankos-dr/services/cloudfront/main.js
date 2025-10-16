@@ -118,7 +118,7 @@ const processFiles = async(file, options) => {
     }
 
     custom_logging(`Switching to ${chalk.green(file_config.switching_to)} environment`);
-    await processCloudFront(file_config);
+    //await processCloudFront(file_config);
 }
 
 const mainFunction = async () => {

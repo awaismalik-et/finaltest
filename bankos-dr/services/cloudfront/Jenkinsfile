@@ -1,22 +1,23 @@
 @Library('client-shared-config') _
 
 pipeline {
-    agent {
-        docker {
-            label 'bankos'
-            image 'build-agent:1.0.2-jdk17'
-            registryUrl 'https://docker.finzly.net'
-            registryCredentialsId 'nexus-creds'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
+    agent any
+        //{
+        //docker {
+        //    label 'bankos'
+        //    image 'build-agent:1.0.2-jdk17'
+        //    registryUrl 'https://docker.finzly.net'
+        //    registryCredentialsId 'nexus-creds'
+        //    args '-v /var/run/docker.sock:/var/run/docker.sock'
+        //}
     }
     environment {
         CONFIG_FILE = './cloudfront/configuration.json'
     }
     parameters {
         choice(name: 'SWITCHING_TO', choices: ['ACTIVE', 'FAILOVER'], description: 'Select the environment')
-        choice(name: 'CLIENT_NAME', choices: (['None', 'All'] + clientConfig.getAllClients()).join('\n'), description: 'Select the CLIENT_NAME')
-
+        //choice(name: 'CLIENT_NAME', choices: (['None', 'All'] + clientConfig.getAllClients()).join('\n'), description: 'Select the CLIENT_NAME')
+        choice(name: 'CLIENT_NAME', choices: ['None', 'All'], description: 'Select the CLIENT_NAME')
         string(name: 'CLIENTS_BATCH_SIZE', defaultValue: '1', description: 'Number of clients to process in parallel')
         string(name: 'RESOURCES_BATCH_SIZE', defaultValue: '1', description: 'Number of RDS resources to process in parallel')
 
