@@ -447,10 +447,10 @@ const mainFunction = async () => {
   
   custom_logging(`Switching to ${chalk.green(config.switching_to)} environment`);
 
-  await processTransferUserReplication(config);
+  //await processTransferUserReplication(config);
   custom_logging(chalk.green("User replication has been completed"));
 
-  await swapTransferFamilyHostnames(config);
+  //await swapTransferFamilyHostnames(config);
   custom_logging(chalk.green("Transferring Hostnames has been completed"));
 };
 
