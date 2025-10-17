@@ -116,7 +116,7 @@ const processFiles = async(file, options) => {
         //after this the file_config only contains the required index cloudfront resource.
         file_config.cloudfront = [ file_config.cloudfront[idx] ];
     }
-
+    console.log(file_config)
     custom_logging(`Switching to ${chalk.green(file_config.switching_to)} environment`);
     //await processCloudFront(file_config);
 }
